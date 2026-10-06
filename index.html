@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=account_balance,account_balance_wallet,add,backspace,beach_access,bolt,build,category,check,checkroom,chevron_left,chevron_right,child_care,close,cloud_done,credit_card,delete,diamond,directions_bus,directions_car,download,edit,favorite,fitness_center,flight,history,home,hotel,layers,local_bar,local_cafe,local_gas_station,local_taxi,medical_services,more_horiz,movie,north_east,payments,pets,phone_iphone,receipt_long,redeem,restaurant,savings,school,settings,shield,shopping_bag,shopping_cart,south_west,spa,sports_esports,star,subscriptions,swap_horiz,tune,upload,volunteer_activism,wifi,work&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=account_balance,account_balance_wallet,add,backspace,beach_access,bolt,build,category,check,checkroom,chevron_left,chevron_right,child_care,close,cloud_done,credit_card,delete,diamond,directions_bus,directions_car,download,edit,favorite,fitness_center,flight,history,home,hotel,layers,local_bar,local_cafe,local_gas_station,local_taxi,mail,medical_services,more_horiz,movie,north_east,payments,pets,phone_iphone,receipt_long,redeem,restaurant,savings,school,settings,shield,shopping_bag,shopping_cart,south_west,spa,sports_esports,star,subscriptions,swap_horiz,tune,upload,volunteer_activism,wifi,work&display=block">
 <style>
 :root{
   --bg:#F3F4F7; --surface:#FFFFFF; --surface-2:#ECEEF3; --ink:#14161C; --ink-2:#5B6170; --ink-3:#8E94A2;
@@ -282,6 +282,30 @@ h1,h2,h3,p{margin:0}
 .brand img{border-radius:7px;display:block}
 .cbar{display:block;height:4px;margin-top:7px;max-width:180px}
 .cbar i{display:block;height:100%;border-radius:99px;background:var(--c);transform-origin:left}
+
+.mailcard{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:var(--r-card);background:var(--surface);color:var(--ink)}
+.mailcard .ms{color:var(--accent)}
+.mailcard .t{flex:1;min-width:0}
+.mailcard .t b{font-weight:600}
+.mailcard small{display:block;color:var(--ink-3);font-size:13px}
+.mailcard .go{font-weight:600;color:var(--accent);font-size:14px}
+.mailcard.hot{background:var(--accent-soft)}
+.mailcard:disabled{cursor:default}
+.mailcard:disabled .ms{animation:pulse 1.2s ease-in-out infinite}
+.rv{background:var(--surface-2);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.rv-top{display:flex;gap:8px;align-items:center}
+.rv-who,.rv-amt{height:42px;border:0;border-radius:10px;background:var(--surface);padding:0 10px;color:var(--ink);min-width:0}
+.rv-who{flex:1;font-weight:500}
+.rv-amt{width:104px;flex:none;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.rv-amt.missing{box-shadow:inset 0 0 0 1.5px var(--neg)}
+.rv-meta{font-size:12px;color:var(--ink-3);overflow-wrap:anywhere}
+.rv-meta b{color:var(--neg);font-weight:500}
+.sheet .rv .chips{margin:0 -12px;padding:0 12px}
+.rv .chip{background:var(--surface);padding:6px 12px;font-size:13px}
+.rv-actions{display:grid;grid-template-columns:1fr 2fr;gap:8px}
+.rv .btn{height:42px;font-size:14px}
+.rv .btn:not(.primary){background:var(--surface)}
+.link:disabled{opacity:.4}
 
 /* Toast */
 .toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + 18px + env(safe-area-inset-bottom,0px));z-index:90;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);padding:12px 12px 12px 18px;border-radius:16px;background:var(--toast-bg);color:var(--toast-ink);font-size:14px;font-weight:500;box-shadow:0 10px 30px var(--shadow);opacity:0;transform:translate(-50%,14px) scale(.98);pointer-events:none;transition:opacity 200ms ease,transform 200ms var(--ease-out)}
@@ -696,6 +720,7 @@ function viewHome() {
     </div>
     <div class="chart" id="mainChart"></div>
   </section>
+  ${canMail() ? `<div class="sec" style="margin-top:12px">${mailCardHTML()}</div>` : ""}
   ${p && p.bal !== 0 ? `<div class="sec" style="margin-top:12px"><button class="unassigned press" data-act="assign">
       <span class="ms">layers</span>
       <span class="t"><b class="num">${money(p.bal)}</b> ${p.bal > 0 ? "isn't in a wallet yet" : "over-assigned"}</span>
@@ -818,6 +843,7 @@ function viewSettings() {
       <span class="tail"><span class="ms">edit</span></span></button>`).join("")}</div>` :
       `<div class="empty"><p>No categories. Add one so you can see what your money goes to.</p><button class="btn primary" data-act="new-cat"><span class="ms">add</span>New category</button></div>`}
   </section>
+  ${mailSettingsHTML()}
   <section class="sec">
     <div class="sec-head"><h2>General</h2></div>
     <div class="list" style="padding:0">
@@ -1495,6 +1521,366 @@ function showOnboarding() {
   draw();
 }
 
+/* ---------------- bank email parsing (pure, no DOM) ---------------- */
+const BANK_DOMAINS = ["kasikornbank.com","kbank.co.th","scb.co.th","bangkokbank.com","krungsri.com","krungthai.com","ktb.co.th","ttbbank.com","uob.co.th","cimbthai.com","kkpfg.com","tisco.co.th","lhbank.co.th","gsb.or.th","baac.or.th","ghbank.co.th","icbcthai.com","ktc.co.th","cardx.co.th","aeon.co.th","citibank.com","truemoney.com","rabbit-linepay.com"];
+const MAIL_KW = {
+  amount: /(amount|total|จำนวนเงิน|ยอดเงิน|ยอดชำระ|จำนวน|ยอดใช้จ่าย|ยอดรวม|ยอดโอน)/i,
+  bad: /(balance|available|limit|fee|charge|คงเหลือ|ค่าธรรมเนียม|วงเงิน|point|คะแนน|ref|อ้างอิง)/i,
+  cur: /(THB|฿|บาท|baht)/i,
+  inn: /(deposit|credited|credit to your|received|incoming|transfer from|refund|cash ?back|เงินเข้า|รับโอน|รับเงิน|ฝากเงิน|โอนเข้า|คืนเงิน|ได้รับเงิน)/gi,
+  out: /(withdraw|debit|debited|transfer to|payment|paid|purchase|spent|charged|ถอน|ชำระ|จ่าย|หักบัญชี|ใช้จ่าย|โอนไปยัง|โอนเงินไป|รายการใช้บัตร|ซื้อ)/gi,
+  who: /^(?:(?:payment|transfer|transferred|paid|sent|money)\s+)?(?:to|merchant(?: name)?|payee|recipient|beneficiary|shop|at|from|sender|ร้านค้า|ชื่อร้านค้า|ผู้รับ(?:เงิน)?|ชื่อผู้รับ|ไปยัง|โอนไปยัง|ชื่อบัญชีผู้รับ|จาก|ผู้โอน|ชื่อผู้โอน|สถานที่)\s*[:：]?\s*(.*)$/i,
+};
+const ENTITIES = {nbsp:" ", amp:"&", lt:"<", gt:">", quot:'"', apos:"'", "#39":"'"};
+function htmlToText(h) {
+  return h.replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d|table|td|th)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (m, e) => e[0] === "#" ? String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)) : (ENTITIES[e.toLowerCase()] ?? m));
+}
+function mailLines(text) {
+  return text.split(/\n+/).map(l => l.replace(/[\s ​]+/g, " ").trim()).filter(Boolean);
+}
+// Finds the transaction amount in cents, preferring numbers labelled as an amount and next to a currency.
+function findAmount(lines) {
+  const re = /(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?/g;
+  let best = null;
+  lines.forEach((line, i) => {
+    const prev = lines[i - 1] || "";
+    let m; re.lastIndex = 0;
+    while ((m = re.exec(line))) {
+      const before = line[m.index - 1] || "", after = line[m.index + m[0].length] || "";
+      if (/[:\/xX*\-]/.test(before) || /[:\/xX*\-%]/.test(after)) continue; // times, dates, masked accounts
+      const hasDec = m[2] !== undefined, hasComma = m[1].includes(",");
+      const near = line.slice(Math.max(0, m.index - 14), m.index + m[0].length + 8);
+      const curNear = MAIL_KW.cur.test(near);
+      if (!hasDec && !hasComma && !curNear) continue;
+      if (!hasDec && m[1].replace(/,/g, "").length > 7) continue;
+      let score = 0;
+      if (curNear) score += 3;
+      if (MAIL_KW.amount.test(line)) score += 3; else if (MAIL_KW.amount.test(prev)) score += 2;
+      if (MAIL_KW.bad.test(line)) score -= 6; else if (MAIL_KW.bad.test(prev) && !MAIL_KW.amount.test(line)) score -= 4;
+      if (hasDec) score += 1;
+      const cents = Math.round(parseFloat(m[1].replace(/,/g, "") + "." + (m[2] || "0").padEnd(2, "0")) * 100);
+      if (cents <= 0) continue;
+      if (!best || score > best.score) best = {score, cents};
+    }
+  });
+  return best && best.score >= 2 ? best.cents : 0;
+}
+function findDirection(subject, lines) {
+  const count = (re, s) => (s.match(re) || []).length;
+  const body = lines.join(" ");
+  const inn = count(MAIL_KW.inn, subject) * 3 + count(MAIL_KW.inn, body);
+  const out = count(MAIL_KW.out, subject) * 3 + count(MAIL_KW.out, body);
+  return inn > out ? "in" : "out";
+}
+function findWho(lines, subject) {
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(MAIL_KW.who);
+    if (!m) continue;
+    let v = (m[1] || "").trim() || (lines[i + 1] || "");
+    v = v.replace(/^[:：\s]+/, "").trim();
+    if (!v || /^[\dxX*\-\s]+$/.test(v) || MAIL_KW.cur.test(v) && /\d/.test(v)) continue;
+    return v.slice(0, 40);
+  }
+  return subject.replace(/^(re|fw|fwd)\s*:\s*/i, "").slice(0, 40);
+}
+// Turns one bank email into a review item. `text` is the decoded body as plain text.
+function parseBankMail({id, subject = "", from = "", text = "", time = Date.now(), snippet = ""}) {
+  const lines = mailLines(text);
+  const all = [subject, ...lines];
+  return {id, t:time, subj:subject, from, snippet:snippet.slice(0, 140),
+    dir:findDirection(subject, lines), a:findAmount(all), who:findWho(lines, subject)};
+}
+
+/* ---------------- bank emails via Gmail (home-screen version only) ---------------- */
+// Google sign-in uses the browser redirect flow: no server, the token stays on this device.
+const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
+const G_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const TOKEN_KEY = "pl-gtoken", OAUTH_KEY = "pl-oauth";
+const canMail = () => !window.claude && location.protocol === "https:";
+function mailCfg() {
+  const m = S.data.mail || (S.data.mail = {});
+  const d = {clientId:"", senders:[], handled:[], pending:[], learn:{}, lastCheck:0, spendW:null, incomeW:POOL};
+  for (const k in d) if (m[k] === undefined) m[k] = d[k];
+  return m;
+}
+const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, "");
+function lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (_) { return null; } }
+function lsSet(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
+function gToken() { const t = lsGet(TOKEN_KEY); return t && t.exp > Date.now() + 60000 ? t.token : null; }
+
+function googleSignIn(next) {
+  const cfg = mailCfg();
+  if (!cfg.clientId) { S.tab = "settings"; render(); toast("Add your Google client ID first"); return; }
+  const state = newId();
+  lsSet(OAUTH_KEY, {state, next});
+  const p = new URLSearchParams({client_id:cfg.clientId, redirect_uri:redirectUri(), response_type:"token", scope:G_SCOPE, include_granted_scopes:"true", state});
+  location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + p;
+}
+// Runs before the app boots: picks up the token Google puts in the address after sign-in.
+function takeOAuthReturn() {
+  const h = location.hash;
+  if (!/access_token=|error=/.test(h)) return null;
+  const q = new URLSearchParams(h.slice(1));
+  history.replaceState(null, "", location.pathname + location.search);
+  const saved = lsGet(OAUTH_KEY); lsSet(OAUTH_KEY, null);
+  if (q.get("error")) return {error: q.get("error") === "access_denied" ? "Google sign-in was cancelled." : "Google sign-in failed: " + q.get("error")};
+  if (!saved || saved.state !== q.get("state")) return {error:"Google sign-in didn't match this app. Try again from the home-screen icon."};
+  lsSet(TOKEN_KEY, {token:q.get("access_token"), exp:Date.now() + Number(q.get("expires_in") || 3600) * 1000});
+  return {next:saved.next};
+}
+async function gmail(path, next) {
+  const token = gToken();
+  if (!token) { googleSignIn(next); throw {code:"redirect"}; }
+  const r = await fetch(GMAIL + path, {headers:{Authorization:"Bearer " + token}});
+  if (r.status === 401) { lsSet(TOKEN_KEY, null); googleSignIn(next); throw {code:"redirect"}; }
+  if (!r.ok) throw {code:"http", status:r.status};
+  return r.json();
+}
+async function pool8(items, fn) {
+  const out = []; let i = 0;
+  await Promise.all(Array.from({length:Math.min(8, items.length)}, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k]); } }));
+  return out;
+}
+const header = (m, n) => ((m.payload && m.payload.headers) || []).find(h => h.name.toLowerCase() === n)?.value || "";
+const addrOf = from => ((from.match(/<([^>]+)>/) || [])[1] || from).trim().toLowerCase();
+function b64(data, charset) {
+  const bin = atob(data.replace(/-/g, "+").replace(/_/g, "/"));
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  try { return new TextDecoder(charset || "utf-8").decode(bytes); } catch (_) { return new TextDecoder().decode(bytes); }
+}
+function mailText(payload) {
+  let plain = "", html = "";
+  const walk = p => {
+    if (!p) return;
+    const ct = (p.mimeType || "").toLowerCase();
+    const cs = ((p.headers || []).find(h => h.name.toLowerCase() === "content-type")?.value.match(/charset="?([\w-]+)/i) || [])[1];
+    if (p.body && p.body.data) { if (ct === "text/plain") plain += b64(p.body.data, cs) + "\n"; else if (ct === "text/html") html += b64(p.body.data, cs) + "\n"; }
+    (p.parts || []).forEach(walk);
+  };
+  walk(payload);
+  return html ? htmlToText(html) : plain;
+}
+function guessCat(who) {
+  const k = (who || "").toLowerCase().trim();
+  if (!k) return null;
+  const learned = mailCfg().learn[k];
+  if (learned && !Cat(learned).archived && Cat(learned).id !== "none") return learned;
+  const hit = allEntries().find(e => e.type === "spend" && e.c && (e.n || "").toLowerCase().trim() === k);
+  return hit ? hit.c : null;
+}
+let mailBusy = false;
+async function checkMail() {
+  const cfg = mailCfg();
+  if (mailBusy) return;
+  if (!cfg.clientId) { S.tab = "settings"; render(); scroller.scrollTop = 0; toast("Set up bank emails first"); return; }
+  if (!cfg.senders.length) { findSenders(); return; }
+  mailBusy = true; render();
+  try {
+    const after = Math.floor((cfg.lastCheck ? cfg.lastCheck - 3 * 3600e3 : Date.now() - 14 * DAY) / 1000);
+    const q = `from:(${cfg.senders.join(" OR ")}) after:${after}`;
+    const list = await gmail(`/messages?maxResults=50&q=${encodeURIComponent(q)}`, "check");
+    const known = new Set([...cfg.handled, ...cfg.pending.map(p => p.id)]);
+    const ids = (list.messages || []).map(m => m.id).filter(id => !known.has(id));
+    const msgs = await pool8(ids, id => gmail(`/messages/${id}?format=full`, "check"));
+    const items = msgs.map(m => {
+      const it = parseBankMail({id:m.id, subject:header(m, "subject"), from:addrOf(header(m, "from")), text:mailText(m.payload), time:Number(m.internalDate) || Date.now(), snippet:m.snippet || ""});
+      it.c = it.dir === "out" ? guessCat(it.who) : null;
+      return it;
+    });
+    cfg.pending = [...cfg.pending, ...items].sort((a, b) => b.t - a.t);
+    cfg.lastCheck = Date.now();
+    mailBusy = false; saveState();
+    if (cfg.pending.length) openReview();
+    else toast("No new bank emails");
+  } catch (err) {
+    mailBusy = false; render();
+    if (err && err.code === "redirect") return;
+    toast(err && err.status === 403 ? "Gmail said no. Check that the Gmail API is turned on in Google Cloud." : "Couldn't reach Gmail. Check your connection and try again.");
+  }
+}
+async function findSenders() {
+  const cfg = mailCfg();
+  if (mailBusy) return;
+  mailBusy = true; render();
+  try {
+    const q = `newer_than:120d (${BANK_DOMAINS.map(d => "from:" + d).join(" OR ")} OR บาท OR THB)`;
+    const list = await gmail(`/messages?maxResults=80&q=${encodeURIComponent(q)}`, "find");
+    const metas = await pool8((list.messages || []).map(m => m.id), id => gmail(`/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, "find"));
+    const by = {};
+    for (const m of metas) {
+      const from = header(m, "from"), a = addrOf(from);
+      if (!a) continue;
+      const g = by[a] || (by[a] = {addr:a, name:from.replace(/<[^>]+>/, "").replace(/"/g, "").trim() || a, n:0, subj:header(m, "subject")});
+      g.n++;
+    }
+    const found = Object.values(by).map(g => ({...g, bank:BANK_DOMAINS.some(d => g.addr.endsWith("@" + d) || g.addr.endsWith("." + d))}))
+      .sort((a, b) => (b.bank - a.bank) || (b.n - a.n));
+    mailBusy = false; render();
+    openSenderPicker(found);
+  } catch (err) {
+    mailBusy = false; render();
+    if (err && err.code === "redirect") return;
+    toast(err && err.status === 403 ? "Gmail said no. Check that the Gmail API is turned on in Google Cloud." : "Couldn't reach Gmail. Check your connection and try again.");
+  }
+}
+function openSenderPicker(found) {
+  const cfg = mailCfg();
+  const chosen = new Set(cfg.senders.length ? cfg.senders : found.filter(f => f.bank).map(f => f.addr));
+  openSheet(`
+    <div class="sheet-head" data-drag><h3>Which emails are from your bank?</h3><button class="close" data-k="close" aria-label="Close"><span class="ms">close</span></button></div>
+    <p class="hero-sub" style="margin:0 0 12px">Tick the senders that email you about payments and transfers. Pocket Ledger only reads emails from these.</p>
+    ${found.length ? `<div class="list" style="background:var(--surface-2)">${found.map(f => `
+      <button class="row" data-k="pick" data-id="${esc(f.addr)}" aria-pressed="${chosen.has(f.addr)}">
+        <span class="ricon neutral"><span class="ms">${chosen.has(f.addr) ? "check" : "account_balance"}</span></span>
+        <span class="rmain"><span class="rtitle">${esc(f.name)}</span><span class="rsub">${esc(f.addr)} · ${f.n} email${f.n > 1 ? "s" : ""}</span></span></button>`).join("")}</div>` :
+      `<div class="empty" style="background:var(--surface-2)"><p>No bank emails found in the last 4 months. Add the sender's address below.</p></div>`}
+    <div class="inline"><input class="field" id="addSender" type="email" inputmode="email" autocomplete="off" placeholder="Add a sender, e.g. alert@yourbank.co.th"><button class="btn" data-k="add">Add</button></div>
+    <div class="sheet-foot"><button class="btn primary block" id="saveSenders">Save</button></div>
+  `, root => {
+    const save = $("#saveSenders", root);
+    const sync = () => { save.disabled = !chosen.size; save.textContent = chosen.size ? `Use ${chosen.size} sender${chosen.size > 1 ? "s" : ""}` : "Pick at least one"; };
+    root.onclick = e => {
+      const b = e.target.closest("[data-k]"); if (!b) return;
+      if (b.dataset.k === "close") closeSheet();
+      else if (b.dataset.k === "pick") {
+        const a = b.dataset.id; chosen.has(a) ? chosen.delete(a) : chosen.add(a);
+        b.setAttribute("aria-pressed", chosen.has(a)); b.querySelector(".ricon .ms").textContent = chosen.has(a) ? "check" : "account_balance"; sync();
+      } else if (b.dataset.k === "add") {
+        const v = $("#addSender", root).value.trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast("Type a full email address"); return; }
+        if (!found.some(f => f.addr === v)) found.unshift({addr:v, name:v, n:0, bank:true});
+        chosen.add(v); cfg.senders = [...chosen]; openSenderPicker(found);
+      }
+    };
+    save.addEventListener("click", () => {
+      cfg.senders = [...chosen]; closeSheet(); saveState();
+      toast("Bank senders saved");
+      setTimeout(checkMail, 300);
+    });
+    sync();
+  }, "Bank senders");
+}
+function reviewCard(it) {
+  const cfg = mailCfg();
+  const out = it.dir === "out";
+  const w = it.w || (out ? (cfg.spendW && W(cfg.spendW).id && !W(cfg.spendW).archived ? cfg.spendW : (liveWallets()[0] || {}).id) : (cfg.incomeW || POOL));
+  it.w = w;
+  const icon = out ? Cat(it.c).icon : "south_west", color = out ? cColor(it.c) : "var(--pos)";
+  const when = dayLabel(it.t) + ", " + new Date(it.t).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"});
+  return `<div class="rv" data-id="${esc(it.id)}">
+    <div class="rv-top">
+      <span class="ricon" style="--c:${color}"><span class="ms">${esc(icon)}</span></span>
+      <input class="rv-who" data-f="who" value="${esc(it.who)}" maxlength="60" aria-label="Description" autocomplete="off">
+      <input class="rv-amt${it.a ? "" : " missing"}" data-f="a" inputmode="decimal" value="${it.a ? (it.a / 100).toFixed(fracDigits()) : ""}" placeholder="Amount" aria-label="Amount">
+    </div>
+    <div class="rv-meta">${esc(when)} · ${esc(it.subj || it.from)}${it.a ? "" : ` · <b>Couldn't read the amount. Type it in.</b>`}</div>
+    <div class="seg-mini" role="group" aria-label="Direction" style="align-self:flex-start">
+      <button data-f="dir" data-id="out" aria-pressed="${out}">Spent</button><button data-f="dir" data-id="in" aria-pressed="${!out}">Received</button>
+    </div>
+    ${out ? `<div class="chips" role="group" aria-label="Category">${liveCats().map(c => `<button class="chip" style="--c:${cColor(c.id)}" data-f="c" data-id="${esc(c.id)}" aria-pressed="${it.c === c.id}"><span class="ms">${esc(c.icon)}</span>${esc(c.name)}</button>`).join("")}</div>` : ""}
+    <div class="chips" role="group" aria-label="${out ? "From wallet" : "Into wallet"}">${[...liveWallets(), pool()].filter(Boolean).map(x => `<button class="chip" style="--c:${wColor(x.id)}" data-f="w" data-id="${esc(x.id)}" aria-pressed="${w === x.id}"><span class="ms">${esc(wIcon(x.id))}</span>${out ? "" : "Into "}${esc(wName(x.id))}</button>`).join("")}</div>
+    <div class="rv-actions"><button class="btn" data-f="skip">Skip</button><button class="btn primary" data-f="add">${out ? "Add spending" : "Add money in"}</button></div>
+  </div>`;
+}
+function itemToEntry(it) {
+  const e = {id:newId(), t:it.t, type:it.dir === "out" ? "spend" : "income", w:it.w, a:it.a, n:(it.who || "").trim(), src:"mail"};
+  if (e.type === "spend" && it.c) e.c = it.c;
+  return e;
+}
+function settleItems(items, add) {
+  const cfg = mailCfg();
+  items = items.filter(i => cfg.pending.some(p => p.id === i.id)); // never settle the same email twice
+  if (!items.length) return;
+  const ids = new Set(items.map(i => i.id));
+  cfg.pending = cfg.pending.filter(p => !ids.has(p.id));
+  cfg.handled = [...cfg.handled, ...ids].slice(-3000);
+  if (!add) { saveState(); return; }
+  for (const it of items) if (it.dir === "out" && it.c && it.who) cfg.learn[it.who.toLowerCase().trim()] = it.c;
+  if (items[0].dir === "out") cfg.spendW = items[0].w;
+  const entries = items.map(itemToEntry);
+  commit(entries, items.length > 1 ? `Added ${items.length} from bank emails` : `Added ${money(entries[0].a)} ${entries[0].type === "spend" ? "spent" : "received"}`, false);
+}
+function openReview() {
+  const cfg = mailCfg();
+  if (!cfg.pending.length) { toast("Nothing to review"); return; }
+  const draw = () => openSheet(`
+    <div class="sheet-head" data-drag><h3>From your bank emails</h3><button class="close" data-k="close" aria-label="Close"><span class="ms">close</span></button></div>
+    <p class="hero-sub" style="margin:0 0 12px">Check each one, then add it. Skipped emails won't come back.</p>
+    <div class="stack-y" id="rvList">${cfg.pending.map(reviewCard).join("")}</div>
+    <div class="sheet-foot"><button class="btn primary block" id="rvAll"></button></div>
+  `, root => {
+    const allBtn = $("#rvAll", root);
+    const ready = () => cfg.pending.filter(p => p.a > 0);
+    const syncAll = () => { const n = ready().length; allBtn.disabled = !n; allBtn.textContent = n ? `Add all ${n}` : "Type the missing amounts first"; };
+    const itemOf = el => cfg.pending.find(p => p.id === el.closest(".rv").dataset.id);
+    const redraw = (it) => { const card = root.querySelector(`.rv[data-id="${CSS.escape(it.id)}"]`); card.outerHTML = reviewCard(it); };
+    const leave = (card, done) => {
+      if (reduceMotion) { done(); return; }
+      card.animate([{opacity:1, transform:"none"}, {opacity:0, transform:"translateX(28px)"}], {duration:200, easing:"ease-out", fill:"forwards"});
+      setTimeout(done, 210);
+    };
+    root.oninput = e => {
+      const f = e.target.dataset.f; if (!f) return;
+      const it = itemOf(e.target);
+      if (f === "who") it.who = e.target.value;
+      if (f === "a") { e.target.value = e.target.value.replace(/[^\d.]/g, ""); it.a = toCents(e.target.value); e.target.classList.toggle("missing", !it.a); syncAll(); }
+    };
+    root.onclick = e => {
+      if (e.target.closest('[data-k="close"]')) { closeSheet(); saveState(); return; }
+      const b = e.target.closest("[data-f]"); if (!b || b.matches("input")) return;
+      const it = itemOf(b), f = b.dataset.f;
+      if (f === "dir") { if (it.dir !== b.dataset.id) { it.dir = b.dataset.id; it.w = null; if (it.dir === "out" && !it.c) it.c = guessCat(it.who); redraw(it); } }
+      else if (f === "c") { it.c = it.c === b.dataset.id ? null : b.dataset.id; redraw(it); }
+      else if (f === "w") { it.w = b.dataset.id; redraw(it); }
+      else if (f === "skip" || f === "add") {
+        if (f === "add" && !it.a) { const inp = b.closest(".rv").querySelector('[data-f="a"]'); inp.focus(); inp.classList.add("missing"); toast("Type the amount first"); return; }
+        const card = b.closest(".rv");
+        card.style.pointerEvents = "none";
+        settleItems([it], f === "add"); // record now; the slide-out below is only visual
+        if (!cfg.pending.length) { closeSheet(); if (f === "skip") toast("All caught up"); return; }
+        syncAll();
+        leave(card, () => card.remove());
+      }
+    };
+    allBtn.addEventListener("click", () => { const items = ready(); if (!items.length) return; closeSheet(); settleItems(items, true); });
+    syncAll();
+  }, "Bank emails");
+  draw();
+}
+function ago(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return "just now"; if (m < 60) return m + " min ago";
+  const h = Math.round(m / 60); if (h < 24) return h + (h > 1 ? " hours" : " hour") + " ago";
+  return dayLabel(t);
+}
+function mailCardHTML() {
+  if (!canMail()) return "";
+  const cfg = mailCfg();
+  if (!cfg.clientId) return `<button class="mailcard press" data-act="tab" data-id="settings"><span class="ms">mail</span><span class="t">Add spending from your bank emails<small>One-time setup in Settings</small></span><span class="go">Set up</span></button>`;
+  if (cfg.pending.length) return `<button class="mailcard hot press" data-act="review"><span class="ms">mail</span><span class="t"><b>${cfg.pending.length} bank email${cfg.pending.length > 1 ? "s" : ""}</b> to review<small>Confirm them to add to your wallets</small></span><span class="go">Review</span></button>`;
+  return `<button class="mailcard press" data-act="check-mail" ${mailBusy ? "disabled" : ""}><span class="ms">mail</span><span class="t">${mailBusy ? "Checking your bank emails\u2026" : "Check bank emails"}<small>${cfg.lastCheck ? "Last checked " + ago(cfg.lastCheck) : "Reads new payments from Gmail"}</small></span><span class="go">${mailBusy ? "" : "Check"}</span></button>`;
+}
+function mailSettingsHTML() {
+  if (!canMail()) return window.claude ? `<section class="sec"><div class="sec-head"><h2>Bank emails</h2></div><p class="note" style="padding:0 2px">Reading bank emails works in the home-screen version of Pocket Ledger.</p></section>` : "";
+  const cfg = mailCfg(), ws = [...liveWallets(), pool()].filter(Boolean);
+  const opts = sel => ws.map(w => `<option value="${esc(w.id)}" ${sel === w.id ? "selected" : ""}>${esc(wName(w.id))}</option>`).join("");
+  return `<section class="sec">
+    <div class="sec-head"><h2>Bank emails</h2><a class="link" href="https://github.com/Avidviri/pocket-ledger#read-bank-emails-setup" target="_blank" rel="noopener">Setup guide</a></div>
+    <div class="list" style="padding:0">
+      <div class="setting" style="flex-direction:column;align-items:stretch;gap:8px"><span class="t">Google client ID<small>From your Google Cloud project. Ends in .apps.googleusercontent.com</small></span>
+        <input class="field" id="gcid" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste client ID" value="${esc(cfg.clientId)}"></div>
+      <div class="setting"><span class="t">Bank senders<small>${cfg.senders.length ? esc(cfg.senders.join(", ")) : "Not chosen yet"}</small></span><button class="link" data-act="find-senders" ${cfg.clientId ? "" : "disabled"}>${cfg.senders.length ? "Change" : "Find"}</button></div>
+      <div class="setting"><span class="t">Spending comes from<small>Used until you pick another wallet</small></span><select class="select" id="spendWSel" aria-label="Default wallet for spending">${opts(cfg.spendW || (liveWallets()[0] || {}).id)}</select></div>
+      <div class="setting"><span class="t">Money received goes to</span><select class="select" id="incomeWSel" aria-label="Default wallet for money received">${opts(cfg.incomeW || POOL)}</select></div>
+      <div class="setting"><span class="t">Google account<small>${gToken() ? "Signed in on this device" : "You'll sign in when you check"}</small></span>${gToken() ? `<button class="link" data-act="g-signout">Sign out</button>` : ""}</div>
+    </div>
+    <p class="note">Emails go straight from Google to this phone. Nothing is sent anywhere else.</p>
+  </section>`;
+}
+
 /* ---------------- global events ---------------- */
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-act]");
@@ -1521,6 +1907,10 @@ document.addEventListener("click", e => {
     case "see-cats": S.tab = "activity"; S.dim = "cat"; S.filter = "all"; S.actMonth = monthKey(Date.now()); render(); scroller.scrollTop = 0; break;
     case "cat-activity": S.tab = "activity"; S.dim = "cat"; S.filter = id; S.actMonth = monthKey(Date.now()); render(); scroller.scrollTop = 0; break;
     case "export": exportData(); break;
+    case "check-mail": checkMail(); break;
+    case "review": openReview(); break;
+    case "find-senders": findSenders(); break;
+    case "g-signout": lsSet(TOKEN_KEY, null); render(); toast("Signed out of Google on this device"); break;
     case "import": { const f = $("#importFile"); if (f) f.click(); break; }
     case "erase": {
       if (!t.classList.contains("armed")) {
@@ -1534,6 +1924,9 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("change", e => {
   if (e.target.id === "importFile" && e.target.files[0]) { importData(e.target.files[0]); e.target.value = ""; return; }
+  if (e.target.id === "gcid") { const v = e.target.value.trim(); mailCfg().clientId = v; saveState(); toast(v ? "Client ID saved" : "Client ID removed"); return; }
+  if (e.target.id === "spendWSel") { mailCfg().spendW = e.target.value; saveState(); return; }
+  if (e.target.id === "incomeWSel") { mailCfg().incomeW = e.target.value; saveState(); return; }
   if (e.target.id === "curSel") { S.data.currency = e.target.value; saveState(); toast(`Currency set to ${e.target.value}`); }
 });
 document.addEventListener("keydown", e => {
@@ -1563,8 +1956,14 @@ function boot() {
   $("#tabbar").hidden = false;
   render();
   if (migrated) Store.persist(new Set());
+  if (oauthReturn) {
+    if (oauthReturn.error) toast(oauthReturn.error);
+    else if (oauthReturn.next === "find") findSenders();
+    else if (oauthReturn.next === "check") checkMail();
+  }
 }
 
+const oauthReturn = canMail() ? takeOAuthReturn() : null;
 Store.init();
 })();
 </script>
