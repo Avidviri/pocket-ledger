@@ -1057,17 +1057,20 @@ function paintAmount(el, v) {
 }
 function bindKeypad(root, get, set) {
   let holdT = null;
-  root.addEventListener("pointerdown", e => {
+  // Bind to this render's keypad with on* properties, never addEventListener on `root`:
+  // the sheet body is reused, so listeners added there pile up and one tap types 2-3 digits.
+  const pad = root.querySelector(".keypad");
+  pad.onpointerdown = e => {
     const b = e.target.closest('[data-key="back"]'); if (!b) return;
     holdT = setTimeout(() => { set(""); holdT = "fired"; }, 500);
-  });
+  };
   const clearHold = () => { if (holdT && holdT !== "fired") clearTimeout(holdT); };
-  root.addEventListener("pointerup", clearHold); root.addEventListener("pointercancel", clearHold);
-  root.addEventListener("click", e => {
+  pad.onpointerup = clearHold; pad.onpointercancel = clearHold;
+  pad.onclick = e => {
     const b = e.target.closest("[data-key]"); if (!b) return;
     if (holdT === "fired") { holdT = null; return; }
     set(keyInput(get(), b.dataset.key));
-  });
+  };
   return e => {
     if (e.target.matches("input,select,textarea")) return false;
     if (/^\d$/.test(e.key) || e.key === ".") { set(keyInput(get(), e.key)); return true; }
