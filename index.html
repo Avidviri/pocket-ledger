@@ -630,6 +630,17 @@ function removeEntries(ids, silent) {
   if (!silent) toast(removed.length > 1 ? "Entries deleted" : "Entry deleted", () => commit(removed, null));
   else toast("Undone");
 }
+// Swaps one entry for an edited copy, reversing the old balance effect first. Returns the old entry.
+function replaceEntry(id, next) {
+  const k0 = Object.keys(S.months).find(k => S.months[k].some(e => e.id === id));
+  if (!k0) return null;
+  const i = S.months[k0].findIndex(e => e.id === id), prev = S.months[k0][i];
+  apply(prev, -1); S.months[k0].splice(i, 1);
+  apply(next, 1); const k1 = monthKey(next.t); (S.months[k1] = S.months[k1] || []).push(next);
+  entriesCache = null; S.fresh = new Set([next.id]);
+  render(); Store.persist(new Set([k0, k1]));
+  return prev;
+}
 function saveState() { entriesCache = null; render(); Store.persist(new Set()); }
 
 /* ---------------- rendering ---------------- */
@@ -1087,6 +1098,7 @@ function openEntry(type, preset = {}) {
     w: preset.w || (type === "move" ? (preset.from || POOL) : validW(last[type]) ? last[type] : liveWallets()[0].id),
     to: preset.to || null, note: preset.note || "", date: preset.date || isoDate(Date.now()),
     c: preset.c && Cat(preset.c).id !== "none" ? preset.c : null,
+    editId: preset.editId || null,
   };
   if (type === "move" && !st.to) { const c = liveWallets().find(w => w.id !== st.w); st.to = c ? c.id : (st.w !== POOL ? POOL : null); }
   const draw = () => {
@@ -1134,6 +1146,7 @@ function openEntry(type, preset = {}) {
           else if (c) { label = `Move ${money(c)} to ${wName(st.to)}`; const after = W(st.w).bal - c; if (after < 0) { h = `${wName(st.w)} will go to ${money(after)}`; warn = true; } }
         }
         hint.textContent = h; hint.classList.toggle("warn", warn);
+        if (st.editId && ok) label = `Save changes \u00b7 ${money(c)}`;
         save.disabled = !ok; save.textContent = label;
         // past notes: same category for spending, same wallet otherwise
         const seen = new Set(); items = [];
@@ -1187,11 +1200,23 @@ function openEntry(type, preset = {}) {
         const c = toCents(st.v);
         if (!c) { amt.classList.remove("shake"); void amt.offsetWidth; amt.classList.add("shake"); return; }
         const today = isoDate(Date.now());
+        const orig = st.editId ? allEntries().find(x => x.id === st.editId) : null;
         let t = Date.now();
-        if (st.date && st.date !== today) { const [y, m, d] = st.date.split("-").map(Number); t = new Date(y, m - 1, d, 12, 0, 0).getTime(); }
-        const e = {id:newId(), t, type:st.type, w:st.w, a:c, n:note.value.trim()};
+        if (orig) {
+          // keep the original time of day; only move the date if it changed
+          t = orig.t;
+          if (st.date && st.date !== isoDate(orig.t)) { const [y, m, d] = st.date.split("-").map(Number); const o = new Date(orig.t); t = new Date(y, m - 1, d, o.getHours(), o.getMinutes()).getTime(); }
+        } else if (st.date && st.date !== today) { const [y, m, d] = st.date.split("-").map(Number); t = new Date(y, m - 1, d, 12, 0, 0).getTime(); }
+        const e = {id:orig ? orig.id : newId(), t, type:st.type, w:st.w, a:c, n:note.value.trim()};
+        if (orig && orig.src) e.src = orig.src;
         if (st.type === "move") e.to = st.to;
         if (st.type === "spend" && st.c) e.c = st.c;
+        if (orig) {
+          closeSheet();
+          const before = replaceEntry(orig.id, e);
+          if (before) toast("Entry updated", () => { replaceEntry(orig.id, before); toast("Undone"); });
+          return;
+        }
         S.data.last = Object.assign({}, S.data.last, {[st.type]: st.w});
         closeSheet();
         const msg = st.type === "spend" ? `Spent ${money(c)}${st.c ? " on " + Cat(st.c).name : ""} from ${wName(st.w)}` :
@@ -1199,7 +1224,7 @@ function openEntry(type, preset = {}) {
         commit([e], msg);
       });
       refresh();
-    }, "Record money");
+    }, st.editId ? "Edit entry" : "Record money");
   };
   draw();
 }
@@ -1386,8 +1411,11 @@ function openEntryDetail(id) {
         `<div class="kv"><span class="k">Wallet</span><span class="v">${esc(wName(e.w))}</span></div>`}
       <div class="kv"><span class="k">When</span><span class="v">${new Date(e.t).toLocaleString("en-GB", {weekday:"short", day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"})}</span></div>
     </div>
-    <button class="btn danger block" id="del"><span class="ms">delete</span>Delete entry</button>
-    <p class="note" style="text-align:center;margin:0 auto">Deleting puts the money back where it was.</p>
+    <div class="btn-row">
+      ${e.type !== "adjust" ? `<button class="btn primary" id="edit"><span class="ms">edit</span>Edit</button>` : ""}
+      <button class="btn danger" id="del" ${e.type === "adjust" ? 'style="grid-column:1 / -1"' : ""}><span class="ms">delete</span>Delete</button>
+    </div>
+    <p class="note" style="text-align:center;margin:0 auto">${e.type === "adjust" ? "To change a balance, use Set balance on the wallet." : "Editing or deleting updates your wallet balances."}</p>
   `, root => {
     root.onclick = ev => {
       if (ev.target.closest('[data-k="close"]')) { closeSheet(); return; }
@@ -1399,6 +1427,11 @@ function openEntryDetail(id) {
       toast(next ? `Moved to ${Cat(next).name}` : "Category removed");
     };
     $("#del", root).addEventListener("click", () => { closeSheet(); removeEntries([id]); });
+    const edit = $("#edit", root);
+    if (edit) edit.addEventListener("click", () => {
+      const f = fracDigits(), v = e.a % 100 === 0 ? String(e.a / 100) : (e.a / 100).toFixed(f);
+      openEntry(e.type, {editId:e.id, v, w:e.w, from:e.w, to:e.to || null, note:e.n || "", date:isoDate(e.t), c:e.c || null});
+    });
   }, typeName);
 }
 
