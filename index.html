@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=account_balance,account_balance_wallet,add,backspace,beach_access,bolt,build,category,check,checkroom,chevron_left,chevron_right,child_care,close,cloud_done,credit_card,delete,diamond,directions_bus,directions_car,download,edit,favorite,fitness_center,flight,history,home,hotel,layers,local_bar,local_cafe,local_gas_station,local_taxi,mail,medical_services,more_horiz,movie,north_east,payments,pets,phone_iphone,receipt_long,redeem,restaurant,savings,school,settings,shield,shopping_bag,shopping_cart,south_east,south_west,spa,sports_esports,star,subscriptions,swap_horiz,tune,upload,volunteer_activism,wifi,work&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=account_balance,account_balance_wallet,add,backspace,beach_access,bolt,build,category,check,checkroom,chevron_left,chevron_right,child_care,close,cloud_done,credit_card,delete,diamond,directions_bus,directions_car,download,edit,expand_more,favorite,fitness_center,flight,history,home,hotel,layers,local_bar,local_cafe,local_gas_station,local_taxi,mail,medical_services,more_horiz,movie,north_east,payments,pets,phone_iphone,receipt_long,redeem,restaurant,savings,school,settings,shield,shopping_bag,shopping_cart,south_east,south_west,spa,sports_esports,star,subscriptions,swap_horiz,tune,upload,visibility,visibility_off,volunteer_activism,wifi,work&display=block">
 <style>
 :root{
   --bg:#F3F4F7; --surface:#FFFFFF; --surface-2:#ECEEF3; --ink:#14161C; --ink-2:#5B6170; --ink-3:#8E94A2;
@@ -315,7 +315,7 @@ h1,h2,h3,p{margin:0}
 .kpi .label{display:flex;align-items:center;gap:6px}
 .kpi strong{font-size:17px;font-weight:600;letter-spacing:-0.02em;overflow-wrap:anywhere;line-height:1.2}
 .kpi strong.neg{color:var(--neg)}
-.key{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);flex:none}
+.kkey{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);flex:none}
 .kd{display:inline-flex;align-items:center;gap:2px;font-size:12px;color:var(--ink-3)}
 .kd .ms{font-size:14px}
 .kd.good{color:var(--pos)} .kd.bad{color:var(--neg)}
@@ -343,6 +343,40 @@ h1,h2,h3,p{margin:0}
 .bbar{grid-column:1 / -1;height:8px}
 .bbar i{display:block;height:100%;background:var(--c);border-radius:0 4px 4px 0;transform-origin:left;transition:transform 450ms var(--ease-out)}
 @starting-style{.bbar i{transform:scaleX(0)}}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px}
+.topbar .page-title{padding-top:0}
+.eye{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface);color:var(--ink-2)}
+.eye[aria-pressed="true"]{color:var(--accent)}
+.masked{letter-spacing:.06em;color:var(--ink-2)}
+.wpick{display:inline-flex;align-items:center;gap:8px;padding:4px 8px 4px 4px;border-radius:999px;background:var(--surface);font-weight:600;font-size:14px}
+.wpick .wicon{width:28px;height:28px;border-radius:99px;margin:0}
+.wpick .wicon .ms{font-size:17px}
+.wpick > .ms{font-size:20px;color:var(--ink-3)}
+.today{display:flex;flex-direction:column;gap:10px}
+.today-nums{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.today-nums strong{font-size:26px;font-weight:600;letter-spacing:-0.03em}
+.today-nums strong.neg{color:var(--neg)}
+.today-nums span{color:var(--ink-2)}
+.meter{height:10px;border-radius:99px;background:var(--accent-soft);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:99px;background:var(--accent);transform-origin:left;transition:transform 450ms var(--ease-out)}
+.meter.over i{background:var(--neg)}
+@starting-style{.meter i{transform:scaleX(0)}}
+.today-foot{font-size:14px;color:var(--ink-2)}
+.today-foot b{color:var(--ink);font-weight:600}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:2px}
+.quick .btn{height:42px;font-size:14px;gap:6px}
+.quick .btn .ms{font-size:18px}
+.insight{font-size:14px;color:var(--ink-2);margin-top:10px;max-width:60ch}
+.insight b{color:var(--ink);font-weight:600}
+.stats{margin-top:12px;padding-top:12px;box-shadow:inset 0 1px 0 var(--line)}
+.lk i.line{height:2px;width:14px;border-radius:2px}
+.c-paceline{fill:none;stroke:var(--out);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.c-pacearea{fill:var(--out);opacity:.1}
+.c-lastline{fill:none;stroke:var(--ink-3);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.c-pacedot{fill:var(--out);stroke:var(--surface);stroke-width:2}
+.c-ctx{fill:var(--ink-3);opacity:.45}
+.c-zero{fill:var(--line)}
 
 /* Toast */
 .toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + 18px + env(safe-area-inset-bottom,0px));z-index:90;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);padding:12px 12px 12px 18px;border-radius:16px;background:var(--toast-bg);color:var(--toast-ink);font-size:14px;font-weight:500;box-shadow:0 10px 30px var(--shadow);opacity:0;transform:translate(-50%,14px) scale(.98);pointer-events:none;transition:opacity 200ms ease,transform 200ms var(--ease-out)}
@@ -416,7 +450,7 @@ h1,h2,h3,p{margin:0}
     <button class="tab" data-act="tab" data-id="home"><span class="ms">home</span>Home</button>
     <button class="tab" data-act="tab" data-id="activity"><span class="ms">history</span>Activity</button>
     <button class="fab" data-act="new" aria-label="Record spending"><span class="ms">add</span></button>
-    <button class="tab" data-act="tab" data-id="wallets"><span class="ms">account_balance_wallet</span>Wallets</button>
+    <button class="tab" data-act="tab" data-id="wallets"><span class="ms">account_balance_wallet</span>Money</button>
     <button class="tab" data-act="tab" data-id="settings"><span class="ms">settings</span>Settings</button>
   </div>
 </nav>
@@ -492,6 +526,7 @@ const S = {
   dim: "cat",
   actView: "summary",
   fresh: new Set(),
+  hide: true,
 };
 let prevTotal = null;
 
@@ -502,12 +537,14 @@ function nf(min, max) {
   const k = cur() + min + max;
   return nfCache[k] || (nfCache[k] = new Intl.NumberFormat("en-US", {style:"currency", currency:cur(), currencyDisplay:"narrowSymbol", minimumFractionDigits:min, maximumFractionDigits:max}));
 }
-function money(c, {sign = false} = {}) {
+function money(c, {sign = false, show = false} = {}) {
+  if (S.hide && !show) return (c < 0 ? "\u2212" : (sign && c > 0 ? "+" : "")) + symbol() + "***";
   const f = fracDigits(), whole = Math.abs(c) % 100 === 0;
   const s = nf(whole ? 0 : f, f).format(Math.abs(c) / 100);
   return (c < 0 ? "−" : (sign && c > 0 ? "+" : "")) + s;
 }
 function bigMoney(c) {
+  if (S.hide) return `<span class="cur">${esc(symbol())}</span><span class="masked">***</span>`;
   const f = fracDigits();
   let h = c < 0 ? "−" : "";
   for (const p of nf(f, f).formatToParts(Math.abs(c) / 100)) {
@@ -700,11 +737,13 @@ function saveState() { entriesCache = null; render(); Store.persist(new Set()); 
 function render() {
   if (!S.data) return;
   const app = $("#app");
-  const views = {home: viewHome, activity: viewActivity, wallets: viewWallets, settings: viewSettings};
+  const views = {home: viewHome, activity: viewActivity, wallets: viewMoney, settings: viewSettings};
   app.innerHTML = views[S.tab]();
   for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-current", t.dataset.id === S.tab ? "page" : "false");
   const cf = $("#cfChart"); if (cf) drawCashflow(cf, S.actMonth);
   const dc = $("#dayChart"); if (dc) drawDaily(dc, S.actMonth);
+  const pc = $("#paceChart"); if (pc) drawPace(pc, pc.dataset.w);
+  const wk = $("#weekChart"); if (wk) drawWeek(wk, wk.dataset.w);
   const chartEl = $("#mainChart");
   if (chartEl) drawChart(chartEl, null, S.range);
   const big = $("#bigTotal");
@@ -765,20 +804,107 @@ function walletCard(w) {
   </button>`;
 }
 
-function viewHome() {
-  const tot = total(), mk = monthKey(Date.now()), spent = monthSpend(mk), p = pool();
-  const recent = allEntries().slice(0, 6);
+/* ---------------- home: one wallet in focus ---------------- */
+function focusWallet() {
   const ws = liveWallets();
+  return ws.find(w => w.id === S.data.focusW) || ws.find(w => /daily/i.test(w.name)) || ws[0] || null;
+}
+const eyeBtn = () => `<button class="eye press" data-act="toggle-hide" aria-label="${S.hide ? "Show amounts" : "Hide amounts"}" aria-pressed="${!S.hide}"><span class="ms">${S.hide ? "visibility_off" : "visibility"}</span></button>`;
+function daySpends(key, wid) {
+  const [y, m] = key.split("-").map(Number), days = new Date(y, m, 0).getDate();
+  const v = Array(days).fill(0);
+  for (const e of S.months[key] || []) if (e.type === "spend" && e.w === wid) v[new Date(e.t).getDate() - 1] += e.a;
+  return v;
+}
+function walletStats(w) {
+  const now = new Date(), mk = monthKey(now.getTime()), today = now.getDate();
+  const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const v = daySpends(mk, w.id), soFar = v.slice(0, today);
+  const spentToday = v[today - 1], spentMonth = soFar.reduce((a, b) => a + b, 0);
+  const daysLeft = days - today + 1;
+  // Today's allowance is set from the balance this morning, so spending today doesn't shrink it.
+  const allowance = Math.max(0, Math.floor((w.bal + spentToday) / daysLeft));
+  const avg = Math.round(spentMonth / today);
+  const lastKey = shiftMonth(mk, -1), lastTotal = daySpends(lastKey, w.id).reduce((a, b) => a + b, 0);
+  return {mk, today, days, daysLeft, spentToday, spentMonth, allowance, avg,
+    biggest: Math.max(0, ...soFar), biggestDay: soFar.indexOf(Math.max(0, ...soFar)) + 1,
+    noSpend: soFar.filter(x => !x).length, projected: avg * days, lastTotal, lastKey};
+}
+
+function viewHome() {
+  const w = focusWallet();
+  const head = `<div class="topbar"><div class="brand"><img src="${BRAND}" alt="" width="26" height="26"><span>Pocket Ledger</span></div>${eyeBtn()}</div>
+  ${window.claude && Store.mode === "local" ? `<div class="banner"><span class="ms">phone_iphone</span><span>Saving on this device only. Open Pocket Ledger from your Claude account to keep your data synced.</span></div>` : ""}`;
+  if (!w) return head + `<div class="empty" style="margin-top:24px"><span class="ms">account_balance_wallet</span><p>Make a wallet for your everyday spending, like Daily, and it will show here.</p><button class="btn primary" data-act="new-wallet"><span class="ms">add</span>New wallet</button></div>`;
+  const s = walletStats(w), color = COLORS[w.color] || COLORS.slate;
+  const used = s.allowance ? s.spentToday / s.allowance : (s.spentToday ? 1 : 0), over = s.spentToday > s.allowance;
+  const endName = new Date(new Date().getFullYear(), new Date().getMonth(), s.days).toLocaleDateString("en-US", {month:"short", day:"numeric"});
+  const recent = allEntries().filter(e => e.w === w.id || e.to === w.id).slice(0, 5);
+  const cats = (() => { const m = {}; for (const e of S.months[s.mk] || []) if (e.type === "spend" && e.w === w.id) { const k = catKey(e); m[k] = (m[k] || 0) + e.a; } return Object.entries(m).sort((a, b) => b[1] - a[1]); })();
+  const p = pool();
+  return head + `
+  <header class="hero">
+    <button class="wpick press" data-act="focus-pick" style="--c:${color}" aria-label="Change the wallet shown on Home">
+      <span class="wicon"><span class="ms">${esc(w.icon)}</span></span>${esc(w.name)}<span class="ms">expand_more</span></button>
+    <div class="big${w.bal < 0 ? " neg" : ""}" id="bigTotal">${bigMoney(w.bal)}</div>
+    <div class="hero-sub">${w.bal > 0 ? `You can spend <strong>${money(s.allowance)}</strong> a day until ${endName}` : `${esc(w.name)} is empty. Move money in to keep going.`}</div>
+  </header>
+  <section class="card today">
+    <div class="kv"><span class="card-title">Today</span><span class="label">${s.daysLeft === 1 ? "Last day of the month" : `${s.daysLeft} days left this month`}</span></div>
+    <div class="today-nums"><strong class="${over ? "neg" : ""}">${money(s.spentToday)}</strong><span>spent of ${money(s.allowance)}</span></div>
+    <div class="meter${over ? " over" : ""}" role="img" aria-label="Spent ${Math.round(used * 100)}% of today's allowance"><i style="transform:scaleX(${Math.min(1, used).toFixed(3)})"></i></div>
+    <div class="today-foot">${over ? `Over by <b>${money(s.spentToday - s.allowance)}</b>. Tomorrow's allowance will be a little lower.` : s.spentToday ? `<b>${money(s.allowance - s.spentToday)}</b> left for today` : "Nothing spent yet today"}</div>
+    <div class="quick">
+      <button class="btn" data-act="quick" data-id="spend"><span class="ms">north_east</span>Spend</button>
+      <button class="btn" data-act="quick" data-id="income"><span class="ms">south_west</span>Add</button>
+      <button class="btn" data-act="quick" data-id="move"><span class="ms">swap_horiz</span>Top up</button>
+    </div>
+  </section>
+  ${canMail() ? `<div class="sec" style="margin-top:12px">${mailCardHTML()}</div>` : ""}
+  <section class="card chart-card" style="margin-top:12px">
+    <div class="chart-top"><div class="chart-read"></div></div>
+    <div class="chart" id="paceChart" data-w="${esc(w.id)}"></div>
+    <div class="legend-row"><span class="lk"><i class="line" style="--c:var(--out)"></i>This month</span><span class="lk"><i class="line" style="--c:var(--ink-3)"></i>${monthShort(s.lastKey)}</span></div>
+    <p class="insight">${s.spentMonth ? `At this pace you'll spend about <b>${money(s.projected)}</b> from ${esc(w.name)} this month${s.lastTotal ? `, ${s.projected > s.lastTotal ? `${money(s.projected - s.lastTotal)} more than` : `${money(s.lastTotal - s.projected)} less than`} ${monthShort(s.lastKey)}` : ""}.` : "Spend from this wallet and your pace will show here."}</p>
+  </section>
+  <section class="card chart-card" style="margin-top:12px">
+    <div class="chart-top"><div class="chart-read"></div></div>
+    <div class="chart" id="weekChart" data-w="${esc(w.id)}"></div>
+    <div class="kpis stats">
+      <div class="kpi"><span class="label">Average a day</span><strong>${money(s.avg)}</strong><span class="kd">this month</span></div>
+      <div class="kpi"><span class="label">Biggest day</span><strong>${money(s.biggest)}</strong><span class="kd">${s.biggest ? new Date(new Date().getFullYear(), new Date().getMonth(), s.biggestDay).toLocaleDateString("en-US", {month:"short", day:"numeric"}) : "None yet"}</span></div>
+      <div class="kpi"><span class="label">No-spend days</span><strong>${s.noSpend}</strong><span class="kd">of ${s.today} so far</span></div>
+    </div>
+  </section>
+  <section class="sec">
+    <div class="sec-head"><h2>${esc(w.name)} spent on</h2>${cats.length ? `<button class="link" data-act="bd" data-dim="wallet" data-id="${esc(w.id)}">All</button>` : ""}</div>
+    <div class="card">${cats.length ? breakdownHTML(cats, "cat") : `<p class="chart-empty">Nothing spent from ${esc(w.name)} this month yet.</p>`}</div>
+  </section>
+  ${p && p.bal > 0 ? `<div class="sec" style="margin-top:12px"><button class="unassigned press" data-act="assign">
+      <span class="ms">layers</span><span class="t"><b class="num">${money(p.bal)}</b> isn't in a wallet yet</span><span class="go">Assign</span></button></div>` : ""}
+  <section class="sec">
+    <div class="sec-head"><h2>Recent in ${esc(w.name)}</h2>${recent.length ? `<button class="link" data-act="bd" data-dim="wallet" data-id="${esc(w.id)}">See all</button>` : ""}</div>
+    ${recent.length ? `<div class="list">${recent.map(e => entryRow(e, {withDate:true})).join("")}</div>` :
+      `<div class="empty"><span class="ms">receipt_long</span><p>Nothing recorded in ${esc(w.name)} yet. Tap + when you spend money.</p></div>`}
+  </section>`;
+}
+
+/* ---------------- money: the overall picture ---------------- */
+function viewMoney() {
+  const tot = total(), mk = monthKey(Date.now()), spent = monthSpend(mk), p = pool(), ws = liveWallets();
   const cs = catSpend(mk).slice(0, 5), csMax = cs.length ? cs[0][1] : 1;
   const inc = byCategory(mk, "income").slice(0, 5), incMax = inc.length ? inc[0][1] : 1;
   return `
-  <div class="brand"><img src="${BRAND}" alt="" width="26" height="26"><span>Pocket Ledger</span></div>
-  ${window.claude && Store.mode === "local" ? `<div class="banner"><span class="ms">phone_iphone</span><span>Saving on this device only. Open Pocket Ledger from your Claude account to keep your data synced.</span></div>` : ""}
-  <header class="hero">
+  <div class="topbar"><h1 class="page-title">All money</h1>${eyeBtn()}</div>
+  <header class="hero" style="padding-top:4px">
     <div class="label">Total money</div>
-    <div class="big${tot < 0 ? " neg" : ""}" id="bigTotal">${bigMoney(tot)}</div>
-    <div class="hero-sub">You've spent <strong>${money(spent)}</strong> in ${new Date().toLocaleDateString("en-US", {month:"long"})}</div>
+    <div class="big${tot < 0 ? " neg" : ""}">${bigMoney(tot)}</div>
+    <div class="hero-sub">In wallets <strong>${money(ws.reduce((s, w) => s + w.bal, 0))}</strong> · Unassigned <strong>${money(p ? p.bal : 0)}</strong></div>
   </header>
+  <div class="btn-row" style="margin-bottom:12px">
+    <button class="btn" data-act="set-total" style="background:var(--surface)"><span class="ms">edit</span>Set total</button>
+    <button class="btn primary" data-act="move"><span class="ms">swap_horiz</span>Move money</button>
+  </div>
   <section class="card chart-card">
     <div class="chart-top">
       <div class="chart-read" id="chartRead"><span class="v">Balance over time</span><span class="d">Drag across the chart to see a day</span></div>
@@ -788,13 +914,12 @@ function viewHome() {
     </div>
     <div class="chart" id="mainChart"></div>
   </section>
-  ${canMail() ? `<div class="sec" style="margin-top:12px">${mailCardHTML()}</div>` : ""}
   ${p && p.bal !== 0 ? `<div class="sec" style="margin-top:12px"><button class="unassigned press" data-act="assign">
       <span class="ms">layers</span>
       <span class="t"><b class="num">${money(p.bal)}</b> ${p.bal > 0 ? "isn't in a wallet yet" : "over-assigned"}</span>
       <span class="go">${p.bal > 0 ? "Assign" : "Fix"}</span></button></div>` : ""}
   <section class="sec">
-    <div class="sec-head"><h2>Wallets</h2><button class="link" data-act="tab" data-id="wallets">Manage</button></div>
+    <div class="sec-head"><h2>Wallets</h2><button class="link" data-act="new-wallet">New wallet</button></div>
     <div class="wgrid">
       ${ws.map(walletCard).join("")}
       <button class="wcard wadd press" data-act="new-wallet"><span class="wicon"><span class="ms">add</span></span><span class="wname">New wallet</span></button>
@@ -807,7 +932,7 @@ function viewHome() {
         <span class="ricon" style="--c:${cColor(id)}"><span class="ms">${esc(Cat(id).icon)}</span></span>
         <span class="rmain"><span class="rtitle">${esc(Cat(id).name)}</span><span class="cbar" aria-hidden="true"><i style="--c:${cColor(id)};transform:scaleX(${(a / csMax).toFixed(3)})"></i></span></span>
         <span class="ramt">${money(a)}</span></button>`).join("")}</div>` :
-      `<div class="empty"><span class="ms">category</span><p>Nothing spent this month yet. Tap + and pick a category like Food or Transport.</p></div>`}
+      `<div class="empty"><span class="ms">category</span><p>Nothing spent this month yet.</p></div>`}
   </section>
   <section class="sec">
     <div class="sec-head"><h2>Money in</h2>${inc.length ? `<button class="link" data-act="see-cats">Details</button>` : ""}</div>
@@ -818,12 +943,88 @@ function viewHome() {
         <span class="ramt pos">${money(a, {sign:true})}</span></button>`).join("")}</div>` :
       `<div class="empty"><span class="ms">payments</span><p>No money in yet this month. Tap + then Add money when you get paid.</p></div>`}
   </section>
-  <section class="sec">
-    <div class="sec-head"><h2>Recent</h2>${recent.length ? `<button class="link" data-act="tab" data-id="activity">See all</button>` : ""}</div>
-    ${recent.length ? `<div class="list">${recent.map(e => entryRow(e, {withDate:true})).join("")}</div>` :
-      `<div class="empty"><span class="ms">receipt_long</span><p>Nothing recorded yet. Tap the + button when you spend money.</p></div>`}
-  </section>`;
+  <p class="note">You've spent ${money(spent)} across all wallets in ${new Date().toLocaleDateString("en-US", {month:"long"})}. Set total when your real money changes; the difference goes to Unassigned.</p>`;
 }
+
+function openFocusPicker() {
+  const cur_ = focusWallet();
+  openSheet(`
+    <div class="sheet-head" data-drag><h3>Show on Home</h3><button class="close" data-k="close" aria-label="Close"><span class="ms">close</span></button></div>
+    <p class="hero-sub" style="margin:0 0 12px">Pick the wallet you spend from day to day.</p>
+    <div class="list" style="background:var(--surface-2)">${liveWallets().map(w => `
+      <button class="row" data-k="pick" data-id="${esc(w.id)}">
+        <span class="ricon" style="--c:${COLORS[w.color] || COLORS.slate}"><span class="ms">${esc(w.icon)}</span></span>
+        <span class="rmain"><span class="rtitle">${esc(w.name)}</span><span class="rsub">${money(w.bal)}</span></span>
+        ${cur_ && cur_.id === w.id ? `<span class="tail" style="color:var(--accent)"><span class="ms">check</span></span>` : ""}</button>`).join("")}</div>
+  `, root => {
+    root.onclick = e => {
+      const b = e.target.closest("[data-k]"); if (!b) return;
+      if (b.dataset.k === "close") { closeSheet(); return; }
+      S.data.focusW = b.dataset.id; closeSheet(); saveState();
+    };
+  }, "Show on Home");
+}
+
+/* cumulative spending: this month against last month */
+function drawPace(el, wid) {
+  const read = el.parentElement.querySelector(".chart-read");
+  const mk = monthKey(Date.now()), lk = shiftMonth(mk, -1), today = new Date().getDate();
+  const cum = (arr, upto) => { let s = 0; return arr.map((x, i) => i < upto ? (s += x) : null); };
+  const thisV = cum(daySpends(mk, wid), today), lastRaw = daySpends(lk, wid), lastV = cum(lastRaw, lastRaw.length);
+  const days = thisV.length;
+  const idle = `<span class="v">Spending pace</span><span class="d">Running total this month vs ${monthShort(lk)}</span>`;
+  if (read) read.innerHTML = idle;
+  const max = Math.max(1, ...thisV.filter(v => v !== null), ...lastV);
+  if (max <= 1) { el.innerHTML = `<p class="chart-empty">No spending from this wallet in the last two months.</p>`; return; }
+  const W_ = Math.max(260, el.clientWidth || 320), H = 150, top = 12, bot = 22, right = 8;
+  const x = i => 4 + i / (days - 1) * (W_ - 8 - right), y = v => top + (1 - v / max) * (H - top - bot);
+  const path = vals => vals.map((v, i) => v === null || i >= days ? null : `${x(i).toFixed(1)} ${y(v).toFixed(1)}`).filter(Boolean).map((p, i) => (i ? "L" : "M") + p).join("");
+  const thisPath = path(thisV), lastPath = path(lastV), ti = today - 1;
+  const area = thisPath + `L${x(ti).toFixed(1)} ${H - bot}L${x(0).toFixed(1)} ${H - bot}Z`;
+  const ticks = [1, 8, 15, 22, days].map(d => `<text class="c-txt" x="${Math.min(W_ - 10, Math.max(6, x(d - 1)))}" y="${H - 5}" text-anchor="middle">${d}</text>`).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${W_} ${H}" width="${W_}" height="${H}" role="img" aria-label="Running total of spending this month compared with last month">
+    <line class="c-grid" x1="0" x2="${W_}" y1="${H - bot}" y2="${H - bot}"/>
+    <line class="c-grid" x1="0" x2="${W_}" y1="${y(max / 2)}" y2="${y(max / 2)}"/>
+    <text class="c-txt" x="0" y="${y(max / 2) - 4}">${moneyShort(Math.round(max / 2))}</text>
+    <path class="c-pacearea" d="${area}"/>
+    <path class="c-lastline" d="${lastPath}"/>
+    <path class="c-paceline" d="${thisPath}"/>
+    <line class="c-cursor" id="pCur" x1="0" x2="0" y1="${top}" y2="${H - bot}" style="opacity:0"/>
+    <circle class="c-pacedot" cx="${x(ti)}" cy="${y(thisV[ti])}" r="4"/>
+    ${ticks}
+    <rect x="0" y="0" width="${W_}" height="${H}" fill="transparent"/>
+  </svg>`;
+  const svg = el.querySelector("svg"), curL = svg.querySelector("#pCur");
+  scrub(svg, days, x, i => {
+    curL.setAttribute("x1", x(i)); curL.setAttribute("x2", x(i)); curL.style.opacity = 1;
+    const label = new Date(new Date().getFullYear(), new Date().getMonth(), i + 1).toLocaleDateString("en-US", {month:"short", day:"numeric"});
+    if (read) read.innerHTML = `<span class="v">${thisV[i] === null ? "Not yet" : money(thisV[i])}</span><span class="d">By ${label} · ${monthShort(lk)}: ${lastV[i] == null ? "n/a" : money(lastV[i])}</span>`;
+  }, () => { curL.style.opacity = 0; if (read) read.innerHTML = idle; });
+}
+/* last 7 days, today emphasized */
+function drawWeek(el, wid) {
+  const read = el.parentElement.querySelector(".chart-read");
+  const days = Array.from({length:7}, (_, i) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - 6 + i); return d; });
+  const vals = days.map(d => (S.months[monthKey(d.getTime())] || []).reduce((s, e) => s + (e.type === "spend" && e.w === wid && startOfDay(e.t) === startOfDay(d.getTime()) ? e.a : 0), 0));
+  const sum = vals.reduce((a, b) => a + b, 0);
+  const idle = `<span class="v">Last 7 days</span><span class="d">${money(sum)} in total</span>`;
+  if (read) read.innerHTML = idle;
+  const W_ = Math.max(260, el.clientWidth || 320), H = 130, top = 18, bot = 22;
+  const max = Math.max(1, ...vals), band = W_ / 7, bw = Math.min(24, band * 0.5), base = H - bot;
+  const cx = i => band * (i + 0.5), y = v => base - v / max * (H - top - bot);
+  const cols = vals.map((v, i) => `<g data-i="${i}" class="cg">${v ? colPath(cx(i) - bw / 2, cx(i) + bw / 2, base, y(v), i === 6 ? "c-day" : "c-ctx") : `<rect class="c-zero" x="${cx(i) - bw / 2}" y="${base - 2}" width="${bw}" height="2" rx="1"/>`}
+    <text class="c-lbl${i === 6 ? " on" : ""}" x="${cx(i)}" y="${H - 5}" text-anchor="middle">${i === 6 ? "Today" : days[i].toLocaleDateString("en-US", {weekday:"short"})}</text></g>`).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${W_} ${H}" width="${W_}" height="${H}" role="img" aria-label="Spending for each of the last 7 days">
+    <line class="c-grid" x1="0" x2="${W_}" y1="${base}" y2="${base}"/>
+    ${cols}
+    ${vals[6] ? `<text class="c-val" x="${cx(6)}" y="${y(vals[6]) - 5}" text-anchor="end">${moneyShort(vals[6])}</text>` : ""}
+    <rect x="0" y="0" width="${W_}" height="${H}" fill="transparent"/>
+  </svg>`;
+  scrub(el.querySelector("svg"), 7, cx, i => {
+    if (read) read.innerHTML = `<span class="v">${vals[i] ? money(vals[i]) : "Nothing spent"}</span><span class="d">${i === 6 ? "Today" : days[i].toLocaleDateString("en-US", {weekday:"long", month:"short", day:"numeric"})}</span>`;
+  }, () => { if (read) read.innerHTML = idle; });
+}
+
 
 function viewActivity() {
   const key = S.actMonth, nowKey = monthKey(Date.now());
@@ -903,6 +1104,7 @@ function activityList(key) {
 /* ---------------- insights ---------------- */
 const compactNF = {};
 function moneyShort(c) {
+  if (S.hide) return symbol() + "***";
   const k = cur();
   const f = compactNF[k] || (compactNF[k] = new Intl.NumberFormat("en-US", {style:"currency", currency:k, currencyDisplay:"narrowSymbol", notation:"compact", maximumFractionDigits:1}));
   return (c < 0 ? "−" : "") + f.format(Math.abs(c) / 100);
@@ -941,8 +1143,8 @@ function kpiHTML(key) {
   };
   const nd = now.n - prev.n;
   return `<section class="card kpis">
-    <div class="kpi"><span class="label"><i class="key" style="--c:var(--in)"></i>Money in</span><strong>${money(now.i)}</strong>${delta(now.i, prev.i, true)}</div>
-    <div class="kpi"><span class="label"><i class="key" style="--c:var(--out)"></i>Spent</span><strong>${money(now.o)}</strong>${delta(now.o, prev.o, false)}</div>
+    <div class="kpi"><span class="label"><i class="kkey" style="--c:var(--in)"></i>Money in</span><strong>${money(now.i)}</strong>${delta(now.i, prev.i, true)}</div>
+    <div class="kpi"><span class="label"><i class="kkey" style="--c:var(--out)"></i>Spent</span><strong>${money(now.o)}</strong>${delta(now.o, prev.o, false)}</div>
     <div class="kpi"><span class="label">Net</span><strong class="${now.n < 0 ? "neg" : ""}">${money(now.n, {sign:true})}</strong>
       <span class="kd ${nd > 0 ? "good" : nd < 0 ? "bad" : ""}">${!prev.i && !prev.o ? (now.n >= 0 ? "Saved" : "Overspent") : nd ? `${money(nd, {sign:true})} vs ${pm}` : `Same as ${pm}`}</span></div>
   </section>`;
@@ -1048,33 +1250,6 @@ function drawDaily(el, key) {
     const d = new Date(yy, mm - 1, i + 1).toLocaleDateString("en-US", {weekday:"short", day:"numeric", month:"short"});
     if (read) read.innerHTML = `<span class="v">${vals[i] ? money(vals[i]) : "Nothing spent"}</span><span class="d">${d}</span>`;
   }, () => { if (read) read.innerHTML = idle; });
-}
-
-function viewWallets() {
-  const ws = liveWallets(), p = pool();
-  return `
-  <h1 class="page-title">Wallets</h1>
-  <section class="card total-card" style="margin-top:10px">
-    <div class="kv"><span class="k">Total money</span><span class="v" style="font-size:20px">${money(total())}</span></div>
-    <div class="kv"><span class="k">In wallets</span><span class="v">${money(ws.reduce((s, w) => s + w.bal, 0))}</span></div>
-    <div class="kv"><span class="k">Unassigned</span><span class="v" style="color:${p && p.bal < 0 ? "var(--neg)" : "inherit"}">${money(p ? p.bal : 0)}</span></div>
-    <div class="btn-row">
-      <button class="btn" data-act="set-total"><span class="ms">edit</span>Set total</button>
-      <button class="btn primary" data-act="move"><span class="ms">swap_horiz</span>Move money</button>
-    </div>
-  </section>
-  <p class="note">Set total when your real money changes (salary, a gift, a correction). The difference goes to Unassigned, and you move it into wallets from there.</p>
-  <section class="sec">
-    <div class="sec-head"><h2>Your wallets</h2><button class="link" data-act="new-wallet">New wallet</button></div>
-    ${ws.length ? `<div class="list">${ws.map(w => `
-      <button class="row" data-act="wallet" data-id="${esc(w.id)}">
-        <span class="ricon" style="--c:${COLORS[w.color] || COLORS.slate}"><span class="ms">${esc(w.icon)}</span></span>
-        <span class="rmain"><span class="rtitle">${esc(w.name)}</span><span class="rsub">${money(monthSpend(monthKey(Date.now()), w.id))} spent this month</span></span>
-        <span class="ramt" style="${w.bal < 0 ? "color:var(--neg)" : ""}">${money(w.bal)}</span>
-        <span class="tail"><span class="ms">chevron_right</span></span>
-      </button>`).join("")}</div>` :
-      `<div class="empty"><span class="ms">account_balance_wallet</span><p>No wallets yet. Make one for each thing you spend on.</p><button class="btn primary" data-act="new-wallet"><span class="ms">add</span>New wallet</button></div>`}
-  </section>`;
 }
 
 function catSettingsHTML(kind, title, blurb, sums) {
@@ -1197,7 +1372,7 @@ function drawChart(el, wid, range) {
   svg.addEventListener("pointerleave", reset);
   svg.addEventListener("pointerup", ev => { if (ev.pointerType !== "mouse") setTimeout(reset, 1200); });
 }
-let rsT; addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (S.ready && S.data) { const c = $("#mainChart"); if (c) drawChart(c, null, S.range); const wc = $("#walletChart"); if (wc) drawChart(wc, wc.dataset.w, "30"); const cf = $("#cfChart"); if (cf) drawCashflow(cf, S.actMonth); const dc = $("#dayChart"); if (dc) drawDaily(dc, S.actMonth); } }, 150); });
+let rsT; addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (S.ready && S.data) { const c = $("#mainChart"); if (c) drawChart(c, null, S.range); const wc = $("#walletChart"); if (wc) drawChart(wc, wc.dataset.w, "30"); const cf = $("#cfChart"); if (cf) drawCashflow(cf, S.actMonth); const dc = $("#dayChart"); if (dc) drawDaily(dc, S.actMonth); const pc = $("#paceChart"); if (pc) drawPace(pc, pc.dataset.w); const wk = $("#weekChart"); if (wk) drawWeek(wk, wk.dataset.w); } }, 150); });
 
 /* ---------------- sheet ---------------- */
 const scroller = $("#scroller");
@@ -1264,6 +1439,10 @@ function toast(msg, undo) {
 }
 toastEl.querySelector("button").addEventListener("click", () => {
   const u = toastUndo; toastEl.classList.remove("show"); toastUndo = null; if (u) u();
+});
+document.addEventListener("visibilitychange", () => {
+  // Hide amounts again whenever you leave the app.
+  if (document.hidden && !S.hide && S.ready && S.data && !$("#onb").firstElementChild) { S.hide = true; render(); }
 });
 document.addEventListener("visibilitychange", () => { if (document.hidden) clearTimeout(toastT); else if (toastEl.classList.contains("show")) toastT = setTimeout(() => toastEl.classList.remove("show"), 2500); });
 
@@ -1380,19 +1559,19 @@ function openEntry(type, preset = {}) {
         if (st.type === "spend") {
           if (!st.w) { ok = false; label = "Pick a wallet"; }
           else if (c) {
-            label = st.c ? `Spend ${money(c)} on ${Cat(st.c).name}` : `Spend ${money(c)} from ${wName(st.w)}`;
+            label = st.c ? `Spend ${money(c, {show:true})} on ${Cat(st.c).name}` : `Spend ${money(c, {show:true})} from ${wName(st.w)}`;
             const after = W(st.w).bal - c;
             if (after < 0) { h = `${wName(st.w)} will go to ${money(after)}`; warn = true; } else h = `${money(after)} left in ${wName(st.w)}`;
           }
         } else if (st.type === "income") {
           if (!st.w) { ok = false; label = "Pick a wallet"; }
-          else if (c) { label = `Add ${money(c)}${st.c ? " from " + Cat(st.c).name : ""} to ${wName(st.w)}`; h = `${wName(st.w)} becomes ${money(W(st.w).bal + c)}`; }
+          else if (c) { label = `Add ${money(c, {show:true})}${st.c ? " from " + Cat(st.c).name : ""} to ${wName(st.w)}`; h = `${wName(st.w)} becomes ${money(W(st.w).bal + c)}`; }
         } else {
           if (!st.w || !st.to || st.w === st.to) { ok = false; label = "Pick two different wallets"; }
-          else if (c) { label = `Move ${money(c)} to ${wName(st.to)}`; const after = W(st.w).bal - c; if (after < 0) { h = `${wName(st.w)} will go to ${money(after)}`; warn = true; } }
+          else if (c) { label = `Move ${money(c, {show:true})} to ${wName(st.to)}`; const after = W(st.w).bal - c; if (after < 0) { h = `${wName(st.w)} will go to ${money(after)}`; warn = true; } }
         }
         hint.textContent = h; hint.classList.toggle("warn", warn);
-        if (st.editId && ok) label = `Save changes \u00b7 ${money(c)}`;
+        if (st.editId && ok) label = `Save changes \u00b7 ${money(c, {show:true})}`;
         save.disabled = !ok; save.textContent = label;
         // past notes: same category for spending, same wallet otherwise
         const seen = new Set(); items = [];
@@ -1542,7 +1721,7 @@ function openSetBalance(id) {
       paintAmount(amt, v);
       const diff = toCents(v) - current, has = v !== "";
       save.disabled = !has || diff === 0;
-      save.textContent = !has ? "Enter an amount" : diff === 0 ? "No change" : `Save ${money(toCents(v))}`;
+      save.textContent = !has ? "Enter an amount" : diff === 0 ? "No change" : `Save ${money(toCents(v), {show:true})}`;
       hint.textContent = has && diff ? (isTotal ? `${money(diff, {sign:true})} goes to Unassigned` : `${money(diff, {sign:true})} change`) : "";
     };
     onSheetKey = bindKeypad(root, () => v, nv => { v = nv; refresh(); });
@@ -1686,6 +1865,7 @@ function openEntryDetail(id) {
 
 /* ---------------- onboarding ---------------- */
 function showOnboarding() {
+  S.hide = false; // you are typing your own numbers here
   const host = $("#onb");
   const ob = {step:0, v:"", currency:"THB", alloc:{}, wallets:WALLET_IDEAS.slice(0, 3).map(x => ({...x, key:newId()}))};
   S.data = {v:1, currency:"THB", wallets:[], categories:[], last:{}};
@@ -2186,12 +2366,15 @@ document.addEventListener("click", e => {
     case "new-wallet": openWalletEdit(null); break;
     case "new-cat": openItemEditor("category", null, {kind:id || "out"}); break;
     case "aview": S.actView = id; render(); break;
-    case "bd": S.tab = "activity"; S.actView = "list"; S.dim = t.dataset.dim; S.filter = id; render(); scroller.scrollTop = 0; break;
+    case "bd": S.tab = "activity"; S.actMonth = monthKey(Date.now()); S.actView = "list"; S.dim = t.dataset.dim; S.filter = id; render(); scroller.scrollTop = 0; break;
     case "cat": openItemEditor("category", Cat(id)); break;
     case "dim": S.dim = id; S.filter = "all"; render(); break;
     case "see-cats": S.tab = "activity"; S.actView = "summary"; S.dim = "cat"; S.filter = "all"; S.actMonth = monthKey(Date.now()); render(); scroller.scrollTop = 0; break;
     case "cat-activity": S.tab = "activity"; S.actView = "list"; S.dim = "cat"; S.filter = id; S.actMonth = monthKey(Date.now()); render(); scroller.scrollTop = 0; break;
     case "export": exportData(); break;
+    case "toggle-hide": S.hide = !S.hide; render(); break;
+    case "focus-pick": openFocusPicker(); break;
+    case "quick": { const w = focusWallet(); if (!w) break; if (id === "move") openEntry("move", {from:POOL, to:w.id}); else openEntry(id, {w:w.id}); break; }
     case "check-mail": checkMail(); break;
     case "review": openReview(); break;
     case "find-senders": findSenders(); break;
