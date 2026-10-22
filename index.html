@@ -378,6 +378,19 @@ h1,h2,h3,p{margin:0}
 .c-ctx{fill:var(--ink-3);opacity:.45}
 .c-zero{fill:var(--line)}
 
+.invcard{display:flex;flex-direction:column;gap:6px}
+.invcard .wicon{width:26px;height:26px;border-radius:9px;margin:0}
+.invcard .wicon .ms{font-size:16px}
+.inv-main{display:flex;flex-direction:column;gap:2px;text-align:left;width:100%}
+.inv-v{font-size:24px;font-weight:600;letter-spacing:-0.03em}
+.inv-s{font-size:14px;color:var(--ink-2)}
+.inv-t{font-size:12px;color:var(--ink-3)}
+.gain{color:var(--pos);font-weight:500} .loss{color:var(--neg);font-weight:500}
+.hero-sub .link{font-size:inherit;padding:0}
+.c-valline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.c-cashline{fill:none;stroke:var(--ink-3);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.c-valdot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+
 /* Toast */
 .toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + 18px + env(safe-area-inset-bottom,0px));z-index:90;display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);padding:12px 12px 12px 18px;border-radius:16px;background:var(--toast-bg);color:var(--toast-ink);font-size:14px;font-weight:500;box-shadow:0 10px 30px var(--shadow);opacity:0;transform:translate(-50%,14px) scale(.98);pointer-events:none;transition:opacity 200ms ease,transform 200ms var(--ease-out)}
 .toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto;transition:opacity 280ms ease,transform 380ms var(--ease-out)}
@@ -792,6 +805,14 @@ function dayLabel(t) {
 function monthLabel(key) { const [y, m] = key.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleDateString("en-US", {month:"long", year:"numeric"}); }
 
 function walletCard(w) {
+  const mv = marketValue(w);
+  if (mv != null) return `<button class="wcard press" style="--c:${COLORS[w.color] || COLORS.slate}" data-act="wallet" data-id="${esc(w.id)}">
+    <span class="wicon"><span class="ms">${esc(w.icon)}</span></span>
+    <span class="wname">${esc(w.name)}</span>
+    <span class="wbal">${money(mv)}</span>
+    <span class="wmeta">Invested ${money(w.bal)}</span>
+    <span class="wmeta" style="margin-top:2px">${gainText(w)}</span>
+  </button>`;
   const mk = monthKey(Date.now()), spent = monthSpend(mk, w.id);
   const base = spent + Math.max(w.bal, 0);
   const used = base > 0 ? Math.min(1, spent / base) : 0;
@@ -892,19 +913,22 @@ function viewHome() {
 /* ---------------- money: the overall picture ---------------- */
 function viewMoney() {
   const tot = total(), mk = monthKey(Date.now()), spent = monthSpend(mk), p = pool(), ws = liveWallets();
+  const iw = investWallet(), mv = marketValue(iw), nw = netWorth();
   const cs = catSpend(mk).slice(0, 5), csMax = cs.length ? cs[0][1] : 1;
   const inc = byCategory(mk, "income").slice(0, 5), incMax = inc.length ? inc[0][1] : 1;
   return `
   <div class="topbar"><h1 class="page-title">All money</h1>${eyeBtn()}</div>
   <header class="hero" style="padding-top:4px">
-    <div class="label">Total money</div>
-    <div class="big${tot < 0 ? " neg" : ""}">${bigMoney(tot)}</div>
+    <div class="label">${mv != null ? "Net worth" : "Total money"}</div>
+    <div class="big${nw < 0 ? " neg" : ""}">${bigMoney(nw)}</div>
+    ${mv != null ? `<div class="hero-sub">Cash ${money(tot - iw.bal)} · Investments ${money(mv)} ${gainText(iw)}</div>` : ""}
     <div class="hero-sub">In wallets <strong>${money(ws.reduce((s, w) => s + w.bal, 0))}</strong> · Unassigned <strong>${money(p ? p.bal : 0)}</strong></div>
   </header>
   <div class="btn-row" style="margin-bottom:12px">
     <button class="btn" data-act="set-total" style="background:var(--surface)"><span class="ms">edit</span>Set total</button>
     <button class="btn primary" data-act="move"><span class="ms">swap_horiz</span>Move money</button>
   </div>
+  ${investCardHTML() ? `<div style="margin-bottom:12px">${investCardHTML()}</div>` : ""}
   <section class="card chart-card">
     <div class="chart-top">
       <div class="chart-read" id="chartRead"><span class="v">Balance over time</span><span class="d">Drag across the chart to see a day</span></div>
@@ -913,6 +937,7 @@ function viewMoney() {
       </div>
     </div>
     <div class="chart" id="mainChart"></div>
+    ${iw ? `<p class="note" style="padding:6px 0 0">This chart counts investments at the cash you put in.</p>` : ""}
   </section>
   ${p && p.bal !== 0 ? `<div class="sec" style="margin-top:12px"><button class="unassigned press" data-act="assign">
       <span class="ms">layers</span>
@@ -1273,6 +1298,7 @@ function viewSettings() {
   ${catSettingsHTML("out", "Spending categories", "What you spend on, like Food or Transport. Any wallet can use any category.", byCat)}
   ${catSettingsHTML("in", "Income categories", "Where your money comes from, like Salary or Side income.", Object.fromEntries(byCategory(mk, "income")))}
   ${mailSettingsHTML()}
+  ${investSettingsHTML()}
   <section class="sec">
     <div class="sec-head"><h2>General</h2></div>
     <div class="list" style="padding:0">
@@ -1372,7 +1398,7 @@ function drawChart(el, wid, range) {
   svg.addEventListener("pointerleave", reset);
   svg.addEventListener("pointerup", ev => { if (ev.pointerType !== "mouse") setTimeout(reset, 1200); });
 }
-let rsT; addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (S.ready && S.data) { const c = $("#mainChart"); if (c) drawChart(c, null, S.range); const wc = $("#walletChart"); if (wc) drawChart(wc, wc.dataset.w, "30"); const cf = $("#cfChart"); if (cf) drawCashflow(cf, S.actMonth); const dc = $("#dayChart"); if (dc) drawDaily(dc, S.actMonth); const pc = $("#paceChart"); if (pc) drawPace(pc, pc.dataset.w); const wk = $("#weekChart"); if (wk) drawWeek(wk, wk.dataset.w); } }, 150); });
+let rsT; addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (S.ready && S.data) { const c = $("#mainChart"); if (c) drawChart(c, null, S.range); const wc = $("#walletChart"); if (wc) { if (investWallet() && investWallet().id === wc.dataset.w) drawInvest(wc, wc.dataset.w); else drawChart(wc, wc.dataset.w, "30"); } const cf = $("#cfChart"); if (cf) drawCashflow(cf, S.actMonth); const dc = $("#dayChart"); if (dc) drawDaily(dc, S.actMonth); const pc = $("#paceChart"); if (pc) drawPace(pc, pc.dataset.w); const wk = $("#weekChart"); if (wk) drawWeek(wk, wk.dataset.w); } }, 150); });
 
 /* ---------------- sheet ---------------- */
 const scroller = $("#scroller");
@@ -1660,15 +1686,17 @@ function openWallet(id) {
   const w = W(id);
   const color = COLORS[w.color] || COLORS.slate;
   const recent = allEntries().filter(e => e.w === id || e.to === id).slice(0, 8);
-  const mk = monthKey(Date.now());
+  const mk = monthKey(Date.now()), mv = marketValue(w), linked = investWallet() && investWallet().id === id;
   openSheet(`
     <div class="sheet-head" data-drag>
       <span class="ricon" style="--c:${color}"><span class="ms">${esc(w.icon)}</span></span>
       <h3>${esc(w.name)}</h3>
       <button class="close" data-k="close" aria-label="Close"><span class="ms">close</span></button>
     </div>
-    <div class="big${w.bal < 0 ? " neg" : ""}" style="font-size:38px;margin-top:4px">${bigMoney(w.bal)}</div>
-    <div class="hero-sub">${money(monthSpend(mk, id))} spent this month</div>
+    ${mv != null ? `<div class="label" style="margin-top:4px">Market value</div>` : ""}
+    <div class="big${(mv ?? w.bal) < 0 ? " neg" : ""}" style="font-size:38px;margin-top:4px">${bigMoney(mv ?? w.bal)}</div>
+    <div class="hero-sub">${mv != null ? `Cash invested <strong>${money(w.bal)}</strong> · ${gainText(w)}` : `${money(monthSpend(mk, id))} spent this month`}</div>
+    ${mv != null ? `<div class="hero-sub" style="margin-top:4px">${S.data.invest.cost != null ? `Your sheet's total cost: ${money(S.data.invest.cost)} · ` : ""}Read ${ago(S.data.invest.at)} · <button class="link" data-k="refresh">Refresh</button></div>` : ""}
     <div class="actions">
       <button class="act" data-k="spend"><span class="ms">north_east</span>Spend</button>
       <button class="act" data-k="income"><span class="ms">south_west</span>Add</button>
@@ -1678,13 +1706,14 @@ function openWallet(id) {
     <section class="card chart-card" style="background:var(--surface-2)">
       <div class="chart-top"><div class="chart-read"></div></div>
       <div class="chart" id="walletChart" data-w="${esc(id)}"></div>
+      ${linked ? `<div class="legend-row"><span class="lk"><i class="line" style="--c:var(--accent)"></i>Market value</span><span class="lk"><i class="line" style="--c:var(--ink-3)"></i>Cash invested</span></div>` : ""}
     </section>
     <div class="sec-head" style="margin-top:20px"><h2>Recent</h2><button class="link" data-k="all">See all</button></div>
     ${recent.length ? `<div class="list" style="background:var(--surface-2)">${recent.map(e => entryRow(e, {withDate:true})).join("")}</div>` :
       `<div class="empty" style="background:var(--surface-2)"><p>No activity in this wallet yet.</p></div>`}
     <div class="sheet-foot"><button class="btn" data-k="edit"><span class="ms">edit</span>Edit wallet</button></div>
   `, root => {
-    requestAnimationFrame(() => { const c = $("#walletChart", root); if (c) drawChart(c, id, "30"); });
+    requestAnimationFrame(() => { const c = $("#walletChart", root); if (c) { if (linked) drawInvest(c, id); else drawChart(c, id, "30"); } });
     root.onclick = e => {
       const row = e.target.closest('[data-act="entry"]');
       if (row) { e.stopPropagation(); openEntryDetail(row.dataset.id); return; }
@@ -1694,8 +1723,9 @@ function openWallet(id) {
       else if (k === "spend" || k === "income") openEntry(k, {w:id});
       else if (k === "move") openEntry("move", {from:id});
       else if (k === "set") openSetBalance(id);
+      else if (k === "refresh") { closeSheet(); refreshInvest(); }
       else if (k === "edit") openWalletEdit(id);
-      else if (k === "all") { closeSheet(); S.tab = "activity"; S.dim = "wallet"; S.filter = id; render(); scroller.scrollTop = 0; }
+      else if (k === "all") { closeSheet(); S.tab = "activity"; S.actView = "list"; S.dim = "wallet"; S.filter = id; render(); scroller.scrollTop = 0; }
     };
   }, w.name);
 }
@@ -2056,6 +2086,137 @@ function parseBankMail({id, subject = "", from = "", text = "", time = Date.now(
     dir:findDirection(subject, lines), a:findAmount(all), who:findWho(lines, subject)};
 }
 
+/* ---------------- investments: market value from your Google Sheet ---------------- */
+// The linked wallet's balance stays the cash you put in. The sheet only supplies today's market value.
+const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
+function investCfg() {
+  const v = S.data.invest || (S.data.invest = {});
+  const d = {walletId:null, sheet:"", range:"'\u{1F4CA} dashboard'!B6:K8", value:null, cost:null, at:0, hist:[]};
+  for (const k in d) if (v[k] === undefined) v[k] = d[k];
+  return v;
+}
+const sheetIdOf = s => ((s || "").match(/\/d\/([a-zA-Z0-9_-]+)/) || [])[1] || (s || "").trim();
+function investWallet() {
+  const c = S.data.invest;
+  return c && c.walletId ? S.data.wallets.find(w => w.id === c.walletId && !w.archived) || null : null;
+}
+function marketValue(w) {
+  const c = S.data.invest;
+  return w && c && c.walletId === w.id && c.value != null ? c.value : null;
+}
+function netWorth() {
+  const w = investWallet(), mv = marketValue(w);
+  return total() + (mv != null ? mv - w.bal : 0);
+}
+// Cash in a wallet at a past moment: today's balance minus everything recorded after it.
+function balAt(wid, t) {
+  let b = W(wid).bal;
+  for (const e of allEntries()) { if (e.t <= t) break; b -= delta(e, wid); }
+  return b;
+}
+function gainText(w) {
+  const mv = marketValue(w); if (mv == null) return "";
+  const g = mv - w.bal, pct = w.bal > 0 ? (g / w.bal * 100) : null;
+  return `<span class="${g >= 0 ? "gain" : "loss"}">${money(g, {sign:true})}${pct != null && !S.hide ? ` (${g >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%)` : ""}</span>`;
+}
+let investBusy = false;
+async function refreshInvest(auto = false) {
+  const c = investCfg();
+  if (!c.walletId || !c.sheet) {
+    if (!auto) { S.tab = "settings"; render(); scroller.scrollTop = 0; toast("Link your investment wallet and sheet in Settings"); }
+    return;
+  }
+  if (auto && !gToken(SHEETS_SCOPE)) return;
+  if (investBusy) return;
+  investBusy = true; render();
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetIdOf(c.sheet))}/values/${encodeURIComponent(c.range)}?valueRenderOption=UNFORMATTED_VALUE`;
+    const j = await gapi(url, "invest", SHEETS_SCOPE);
+    const rows = j.values || [], num = x => typeof x === "number" ? x : Number(String(x ?? "").replace(/[^\d.\-]/g, ""));
+    let value = null, cost = null;
+    // Header row above a value row, the same way server.py reads B6:K8.
+    for (let r = 0; r + 1 < rows.length; r++) rows[r].forEach((h, ci) => {
+      const hs = String(h).toLowerCase(), v = num(rows[r + 1][ci]);
+      if (!isFinite(v) || rows[r + 1][ci] === "" || rows[r + 1][ci] == null) return;
+      if (hs.includes("total value") && value === null) value = v;
+      else if (hs.includes("total cost") && cost === null) cost = v;
+    });
+    if (value === null) { const flat = rows.flat().map(num).filter(v => isFinite(v) && v); if (flat.length === 1) value = flat[0]; }
+    if (value === null) throw {code:"parse"};
+    c.value = Math.round(value * 100); c.cost = cost === null ? null : Math.round(cost * 100); c.at = Date.now();
+    const last = c.hist[c.hist.length - 1];
+    if (last && c.at - last.t < 30 * 60e3) c.hist[c.hist.length - 1] = {t:c.at, v:c.value}; else c.hist.push({t:c.at, v:c.value});
+    c.hist = c.hist.slice(-500);
+    investBusy = false; saveState();
+    if (!auto) toast("Investments updated from your sheet");
+  } catch (err) {
+    investBusy = false; render();
+    if (err && err.code === "redirect") return;
+    toast(err && err.code === "parse" ? "Couldn't find \"Total value\" in that range. Check the range in Settings." :
+          err && (err.status === 403 || err.status === 404) ? "Google Sheets said no. Check the sheet link, and that the Sheets API is on." :
+          "Couldn't reach Google Sheets. Try again.");
+  }
+}
+function investCardHTML() {
+  if (!canMail()) return "";
+  const w = investWallet(), c = S.data.invest || {};
+  if (!w) return "";
+  const mv = marketValue(w);
+  return `<section class="card invcard" style="--c:${COLORS[w.color] || COLORS.slate}">
+    <div class="kv"><span class="label" style="display:flex;align-items:center;gap:8px"><span class="wicon"><span class="ms">${esc(w.icon)}</span></span>${esc(w.name)}</span>
+      <button class="link" data-act="invest-refresh" ${investBusy ? "disabled" : ""}>${investBusy ? "Updating…" : "Refresh"}</button></div>
+    <button class="inv-main" data-act="wallet" data-id="${esc(w.id)}">
+      <span class="inv-v">${mv == null ? "Not read yet" : money(mv)}</span>
+      <span class="inv-s">${mv == null ? "Tap Refresh to read your sheet" : `Invested ${money(w.bal)} · ${gainText(w)}`}</span>
+      ${c.at ? `<span class="inv-t">Market value from your sheet, ${ago(c.at)}</span>` : ""}
+    </button>
+  </section>`;
+}
+function investSettingsHTML() {
+  if (!canMail()) return "";
+  const c = investCfg(), ws = liveWallets();
+  return `<section class="sec">
+    <div class="sec-head"><h2>Investments</h2><a class="link" href="https://github.com/Avidviri/pocket-ledger#investments-from-your-google-sheet" target="_blank" rel="noopener">Setup guide</a></div>
+    <div class="list" style="padding:0">
+      <div class="setting"><span class="t">Investment wallet<small>Its balance stays the cash you put in</small></span>
+        <select class="select" id="invWallet" aria-label="Investment wallet"><option value="">None</option>${ws.map(w => `<option value="${esc(w.id)}" ${c.walletId === w.id ? "selected" : ""}>${esc(w.name)}</option>`).join("")}</select></div>
+      <div class="setting" style="flex-direction:column;align-items:stretch;gap:8px"><span class="t">Google Sheet<small>Paste the sheet's link from your browser</small></span>
+        <input class="field" id="invSheet" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(c.sheet)}"></div>
+      <div class="setting" style="flex-direction:column;align-items:stretch;gap:8px"><span class="t">Cells to read<small>A "Total value" heading with the number below it. "Total cost" is read too if it's there.</small></span>
+        <input class="field" id="invRange" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(c.range)}"></div>
+      <div class="setting"><span class="t">Last read<small>${c.at ? `${money(c.value)} ${ago(c.at)}` : "Not yet"}</small></span><button class="link" data-act="invest-refresh" ${c.walletId && c.sheet ? "" : "disabled"}>Refresh now</button></div>
+    </div>
+    <p class="note">Uses the Google client ID from Bank emails. Your sheet is read straight from Google on this phone, read-only.</p>
+  </section>`;
+}
+function drawInvest(el, wid) {
+  const read = el.parentElement.querySelector(".chart-read");
+  const c = S.data.invest || {}, pts = (c.hist || []).map(h => ({t:h.t, v:h.v, cash:balAt(wid, h.t)}));
+  const idle = `<span class="v">Market value vs cash invested</span><span class="d">${pts.length} reading${pts.length === 1 ? "" : "s"} from your sheet</span>`;
+  if (read) read.innerHTML = idle;
+  if (pts.length < 2) { el.innerHTML = `<p class="chart-empty">History builds up each time you refresh. Check back after a few days.</p>`; return; }
+  const W_ = Math.max(260, el.clientWidth || 320), H = 150, top = 12, bot = 22;
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t, all = pts.flatMap(p => [p.v, p.cash]);
+  let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.05 || 100; lo -= pad; hi += pad;
+  const x = t => 4 + (t - t0) / Math.max(1, t1 - t0) * (W_ - 8), y = v => top + (1 - (v - lo) / (hi - lo)) * (H - top - bot);
+  const line = k => pts.map((p, i) => (i ? "L" : "M") + x(p.t).toFixed(1) + " " + y(p[k]).toFixed(1)).join("");
+  const last = pts[pts.length - 1], fmt = t => new Date(t).toLocaleDateString("en-US", {month:"short", day:"numeric"});
+  el.innerHTML = `<svg viewBox="0 0 ${W_} ${H}" width="${W_}" height="${H}" role="img" aria-label="Market value compared with cash invested">
+    <line class="c-grid" x1="0" x2="${W_}" y1="${H - bot}" y2="${H - bot}"/>
+    <path class="c-cashline" d="${line("cash")}"/>
+    <path class="c-valline" d="${line("v")}"/>
+    <line class="c-cursor" id="iCur" x1="0" x2="0" y1="${top}" y2="${H - bot}" style="opacity:0"/>
+    <circle class="c-valdot" cx="${x(last.t)}" cy="${y(last.v)}" r="4"/>
+    <text class="c-txt" x="2" y="${H - 5}">${fmt(t0)}</text><text class="c-txt" x="${W_ - 2}" y="${H - 5}" text-anchor="end">${fmt(t1)}</text>
+    <rect x="0" y="0" width="${W_}" height="${H}" fill="transparent"/>
+  </svg>`;
+  const svg = el.querySelector("svg"), cur_ = svg.querySelector("#iCur");
+  scrub(svg, pts.length, i => x(pts[i].t), i => {
+    const p = pts[i]; cur_.setAttribute("x1", x(p.t)); cur_.setAttribute("x2", x(p.t)); cur_.style.opacity = 1;
+    if (read) read.innerHTML = `<span class="v">${money(p.v)}</span><span class="d">${fmt(p.t)} · invested ${money(p.cash)} · ${money(p.v - p.cash, {sign:true})}</span>`;
+  }, () => { cur_.style.opacity = 0; if (read) read.innerHTML = idle; });
+}
+
 /* ---------------- bank emails via Gmail (home-screen version only) ---------------- */
 // Google sign-in uses the browser redirect flow: no server, the token stays on this device.
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -2071,14 +2232,24 @@ function mailCfg() {
 const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, "");
 function lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (_) { return null; } }
 function lsSet(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
-function gToken() { const t = lsGet(TOKEN_KEY); return t && t.exp > Date.now() + 60000 ? t.token : null; }
+function gToken(scope) {
+  const t = lsGet(TOKEN_KEY);
+  return t && t.exp > Date.now() + 60000 && (!scope || (t.scope || G_SCOPE).includes(scope)) ? t.token : null;
+}
+function neededScopes(next) {
+  const s = new Set(), m = S.data.mail || {}, inv = S.data.invest || {};
+  if (next === "check" || next === "find" || (m.senders && m.senders.length)) s.add(G_SCOPE);
+  if (next === "invest" || inv.walletId) s.add(SHEETS_SCOPE);
+  if (!s.size) s.add(G_SCOPE);
+  return [...s].join(" ");
+}
 
 function googleSignIn(next) {
   const cfg = mailCfg();
   if (!cfg.clientId) { S.tab = "settings"; render(); toast("Add your Google client ID first"); return; }
   const state = newId();
   lsSet(OAUTH_KEY, {state, next});
-  const p = new URLSearchParams({client_id:cfg.clientId, redirect_uri:redirectUri(), response_type:"token", scope:G_SCOPE, include_granted_scopes:"true", state});
+  const p = new URLSearchParams({client_id:cfg.clientId, redirect_uri:redirectUri(), response_type:"token", scope:neededScopes(next), include_granted_scopes:"true", state});
   location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + p;
 }
 // Runs before the app boots: picks up the token Google puts in the address after sign-in.
@@ -2090,13 +2261,14 @@ function takeOAuthReturn() {
   const saved = lsGet(OAUTH_KEY); lsSet(OAUTH_KEY, null);
   if (q.get("error")) return {error: q.get("error") === "access_denied" ? "Google sign-in was cancelled." : "Google sign-in failed: " + q.get("error")};
   if (!saved || saved.state !== q.get("state")) return {error:"Google sign-in didn't match this app. Try again from the home-screen icon."};
-  lsSet(TOKEN_KEY, {token:q.get("access_token"), exp:Date.now() + Number(q.get("expires_in") || 3600) * 1000});
+  lsSet(TOKEN_KEY, {token:q.get("access_token"), exp:Date.now() + Number(q.get("expires_in") || 3600) * 1000, scope:q.get("scope") || ""});
   return {next:saved.next};
 }
-async function gmail(path, next) {
-  const token = gToken();
+async function gmail(path, next) { return gapi(GMAIL + path, next, G_SCOPE); }
+async function gapi(url, next, scope) {
+  const token = gToken(scope);
   if (!token) { googleSignIn(next); throw {code:"redirect"}; }
-  const r = await fetch(GMAIL + path, {headers:{Authorization:"Bearer " + token}});
+  const r = await fetch(url, {headers:{Authorization:"Bearer " + token}});
   if (r.status === 401) { lsSet(TOKEN_KEY, null); googleSignIn(next); throw {code:"redirect"}; }
   if (!r.ok) throw {code:"http", status:r.status};
   return r.json();
@@ -2372,6 +2544,7 @@ document.addEventListener("click", e => {
     case "see-cats": S.tab = "activity"; S.actView = "summary"; S.dim = "cat"; S.filter = "all"; S.actMonth = monthKey(Date.now()); render(); scroller.scrollTop = 0; break;
     case "cat-activity": S.tab = "activity"; S.actView = "list"; S.dim = "cat"; S.filter = id; S.actMonth = monthKey(Date.now()); render(); scroller.scrollTop = 0; break;
     case "export": exportData(); break;
+    case "invest-refresh": refreshInvest(); break;
     case "toggle-hide": S.hide = !S.hide; render(); break;
     case "focus-pick": openFocusPicker(); break;
     case "quick": { const w = focusWallet(); if (!w) break; if (id === "move") openEntry("move", {from:POOL, to:w.id}); else openEntry(id, {w:w.id}); break; }
@@ -2393,6 +2566,9 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => {
   if (e.target.id === "importFile" && e.target.files[0]) { importData(e.target.files[0]); e.target.value = ""; return; }
   if (e.target.id === "gcid") { const v = e.target.value.trim(); mailCfg().clientId = v; saveState(); toast(v ? "Client ID saved" : "Client ID removed"); return; }
+  if (e.target.id === "invWallet") { investCfg().walletId = e.target.value || null; saveState(); toast(e.target.value ? "Investment wallet linked" : "Investment wallet unlinked"); return; }
+  if (e.target.id === "invSheet") { investCfg().sheet = e.target.value.trim(); saveState(); toast("Sheet saved"); return; }
+  if (e.target.id === "invRange") { investCfg().range = e.target.value.trim() || "'\u{1F4CA} dashboard'!B6:K8"; saveState(); return; }
   if (e.target.id === "spendWSel") { mailCfg().spendW = e.target.value; saveState(); return; }
   if (e.target.id === "incomeWSel") { mailCfg().incomeW = e.target.value; saveState(); return; }
   if (e.target.id === "curSel") { S.data.currency = e.target.value; saveState(); toast(`Currency set to ${e.target.value}`); }
@@ -2428,7 +2604,11 @@ function boot() {
     if (oauthReturn.error) toast(oauthReturn.error);
     else if (oauthReturn.next === "find") findSenders();
     else if (oauthReturn.next === "check") checkMail();
+    else if (oauthReturn.next === "invest") refreshInvest();
   }
+  // Quietly refresh the market value on open when we're already signed in.
+  const ic = S.data.invest;
+  if (canMail() && ic && ic.walletId && ic.sheet && Date.now() - (ic.at || 0) > 3600e3 && !(oauthReturn && oauthReturn.next === "invest")) refreshInvest(true);
 }
 
 const oauthReturn = canMail() ? takeOAuthReturn() : null;
