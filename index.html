@@ -2384,10 +2384,8 @@ function openHistoryReview(items, from, to) {
     }, "Past transactions");
   };
 
-  const nextToLabel = i => {
-    for (let k = 1; k <= rows.length; k++) { const j = (i + k) % rows.length; if (rows[j].on && !rows[j].c) return j; }
-    return -1;
-  };
+  // Next means the next row down the list (the next older transaction), never a jump.
+  const nextRow = i => i + 1 < rows.length ? i + 1 : -1;
   const drawLabel = i => {
     const r = rows[i], origName = r.who.toLowerCase();
     const st = {dir:r.dir, c:r.c, v:r.a % 100 === 0 ? String(r.a / 100) : (r.a / 100).toFixed(fracDigits())};
@@ -2400,14 +2398,14 @@ function openHistoryReview(items, from, to) {
             <button data-k="dir" data-id="out" aria-pressed="${st.dir === "out"}">Spent</button><button data-k="dir" data-id="in" aria-pressed="${st.dir === "in"}">Received</button></div>
         </div>
         <div class="amount" id="amt"></div>
-        <div class="hint">${esc(whenLong(r.t))}</div>
+        <div class="hint">${esc(whenLong(r.t))} \u00b7 ${i + 1} of ${rows.length}</div>
         <div class="flabel">${kind === "out" ? "For" : "Source"}</div>
         ${catChips(st.c, kind).replace(/<button class="chip" data-k="newcat">[\s\S]*?<\/button>/, "")}
         <div class="inline"><input class="field" id="note" maxlength="60" autocomplete="off" enterkeyhint="done" value="${esc(r.who)}" aria-label="Name"></div>
         ${keypadHTML()}
         <div class="btn-row">
           <button class="btn" id="lOut">${r.on ? "Leave out" : "Include again"}</button>
-          <button class="btn primary" id="lNext">Save & next</button>
+          <button class="btn primary" id="lNext">${i + 1 < rows.length ? "Save & next" : "Save & finish"}</button>
         </div>
       `, root => {
         const amt = $("#amt", root), note = $("#note", root);
@@ -2423,16 +2421,17 @@ function openHistoryReview(items, from, to) {
         };
         $("#lOut", root).onclick = () => {
           r.on = !r.on;
-          if (!r.on) { const j = nextToLabel(i); toast("Left out"); if (j >= 0) drawLabel(j); else drawList(); }
+          if (!r.on) { const j = nextRow(i); toast("Left out"); if (j >= 0) drawLabel(j); else drawList(); }
           else draw();
         };
         $("#lNext", root).onclick = () => {
           r.dir = st.dir; r.c = st.c; r.a = toCents(st.v) || r.a; r.who = note.value.trim() || r.who; r.on = true;
           let more = 0;
           if (r.c) for (const x of rows) if (x !== r && x.on && !x.c && x.dir === r.dir && x.who.toLowerCase() === origName) { x.c = r.c; x.who = r.who; more++; }
-          const j = nextToLabel(i);
+          const j = nextRow(i);
           if (more) toast(`Also labeled ${more} more from ${r.who}`);
-          if (j >= 0) drawLabel(j); else { drawList(); if (!more) toast("Everything is labeled"); }
+          if (j >= 0) drawLabel(j);
+          else { drawList(); const left = rows.filter(x => x.on && !x.c).length; if (!more) toast(left ? `That was the last one. ${left} still need a label` : "Everything is labeled"); }
         };
         paint();
       }, "Label transaction");
