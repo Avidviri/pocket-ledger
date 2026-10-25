@@ -395,30 +395,11 @@ h1,h2,h3,p{margin:0}
 .hsum span{display:inline-flex;align-items:center;gap:6px}
 .hsum b{color:var(--ink);font-weight:600}
 .hgroups{display:flex;flex-direction:column;gap:8px}
-.hg{background:var(--surface-2);border-radius:14px;padding:4px 12px 10px;display:flex;flex-direction:column;gap:8px;transition:opacity 160ms ease}
-.hg.off{opacity:.5}
-.hg-head{display:flex;align-items:center;gap:10px;width:100%;padding:8px 0 0;text-align:left}
-.hg-main{display:flex;flex-direction:column;min-width:0;flex:1}
-.hg-who{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hg-meta{font-size:12px;color:var(--ink-3)}
-.hg-amts{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
-.hg-amt{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-.hg-amt.pos{color:var(--pos)}
-.hg-chev{color:var(--ink-3);transition:transform 200ms var(--ease-out)}
-.hg-head[aria-expanded="true"] .hg-chev{transform:rotate(180deg)}
-.hg-catrow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2)}
-.hg-catrow span{width:82px;flex:none}
-.hg-catrow .select{flex:1;min-width:0;background-color:var(--surface)}
-.hg-items{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;border-radius:12px;background:var(--surface);overflow:hidden}
-.hi{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"chk when amt" "chk dir dir";gap:6px 10px;align-items:center;padding:10px 12px}
-.hi + .hi{box-shadow:inset 0 1px 0 var(--line)}
-.hi.off{opacity:.45}
-.hi input{grid-area:chk;width:20px;height:20px;accent-color:var(--accent);margin:0}
-.hi-when{grid-area:when;font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hi-amt{grid-area:amt;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-.hi-amt.pos{color:var(--pos)}
-.hi-dir{grid-area:dir;justify-self:start}
-.hg-bulk{display:flex;gap:18px}
+.seg2{grid-template-columns:repeat(2,1fr)}
+.seg2 .ind{width:calc((100% - 6px)/2)}
+.hrow.off{opacity:.45}
+.hrow.off .rtitle{text-decoration:line-through}
+.hrow .rsub b{color:var(--accent);font-weight:500}
 .c-yr{fill:var(--out);opacity:.55}
 .hist-cta{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .hist-cta .btn{flex:none}
@@ -2352,113 +2333,135 @@ async function runHistoryImport(from, to, root) {
 }
 function openHistoryReview(items, from, to) {
   const cfg = mailCfg();
-  const good = items.filter(i => i.a > 0).map(i => ({...i, on:true})), skipped = items.length - good.length;
-  // One row per name, whatever the direction. Each transaction keeps its own date and direction.
-  const by = {};
-  for (const it of good) {
-    const k = (it.who || "Unknown").toLowerCase().trim();
-    (by[k] = by[k] || {who:(it.who || "Unknown").trim(), items:[], open:false}).items.push(it);
-  }
-  const groups = Object.values(by);
-  for (const g of groups) { g.items.sort((a, b) => a.t - b.t); g.cOut = guessCat(g.who, "out"); g.cIn = guessCat(g.who, "in"); g.size = g.items.reduce((s, x) => s + x.a, 0); }
-  groups.sort((a, b) => b.size - a.size);
-  if (!groups.length) { closeSheet(); toast(skipped ? `Found ${skipped} emails, but none had an amount Pocket Ledger could read` : "No transactions found"); return; }
-  const totals = list => { const t = {o:0, i:0, no:0, ni:0}; for (const x of list) if (x.on) { if (x.dir === "out") { t.o += x.a; t.no++; } else { t.i += x.a; t.ni++; } } return t; };
-  const short = t => new Date(t).toLocaleDateString("en-US", {month:"short", day:"numeric"});
-  const when = t => new Date(t).toLocaleString("en-GB", {weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
-  const span = g => { const a = g.items[0].t, b = g.items[g.items.length - 1].t; return startOfDay(a) === startOfDay(b) ? short(a) : `${short(a)} to ${short(b)}`; };
-  const opts = (kind, sel) => `<option value="">Uncategorized</option>` + liveCats(kind).map(c => `<option value="${esc(c.id)}" ${sel === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+  // One row per email, newest first, labelled one at a time on the same screen as adding a transaction.
+  const rows = items.filter(i => i.a > 0)
+    .map(i => ({id:i.id, t:i.t, a:i.a, dir:i.dir, who:(i.who || "Unknown").trim(), on:true, c:guessCat(i.who, i.dir)}))
+    .sort((a, b) => b.t - a.t);
+  const skipped = items.length - rows.length;
+  if (!rows.length) { closeSheet(); toast(skipped ? `Found ${skipped} emails, but none had an amount Pocket Ledger could read` : "No transactions found"); return; }
   const range = `${new Date(from).toLocaleDateString("en-US", {month:"short", day:"numeric"})} to ${new Date(to - DAY).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"})}`;
-  const groupHTML = (g, i) => {
-    const t = totals(g.items), hasOut = g.items.some(x => x.dir === "out"), hasIn = g.items.some(x => x.dir === "in");
-    const counts = [t.no ? `${t.no} spent` : "", t.ni ? `${t.ni} received` : ""].filter(Boolean).join(" · ") || "Nothing included";
-    return `<div class="hg${t.no + t.ni ? "" : " off"}" data-i="${i}">
-      <button class="hg-head" data-f="open" aria-expanded="${g.open}">
-        <span class="hg-main"><span class="hg-who">${esc(g.who)}</span><span class="hg-meta">${counts} · ${span(g)}</span></span>
-        <span class="hg-amts">${t.no ? `<span class="hg-amt">${money(-t.o)}</span>` : ""}${t.ni ? `<span class="hg-amt pos">${money(t.i, {sign:true})}</span>` : ""}</span>
-        <span class="ms hg-chev" aria-hidden="true">expand_more</span>
-      </button>
-      ${hasOut ? `<label class="hg-catrow"><span>Spent on</span><select class="select" data-f="cOut" aria-label="Category for spending at ${esc(g.who)}">${opts("out", g.cOut)}</select></label>` : ""}
-      ${hasIn ? `<label class="hg-catrow"><span>Money from</span><select class="select" data-f="cIn" aria-label="Income type for money from ${esc(g.who)}">${opts("in", g.cIn)}</select></label>` : ""}
-      ${g.open ? `<ul class="hg-items">${g.items.map((x, j) => `
-        <li class="hi${x.on ? "" : " off"}" data-j="${j}">
-          <input type="checkbox" data-f="on" ${x.on ? "checked" : ""} aria-label="Include ${esc(when(x.t))}">
-          <span class="hi-when">${esc(when(x.t))}</span>
-          <span class="hi-amt${x.dir === "in" ? " pos" : ""}">${x.dir === "in" ? money(x.a, {sign:true}) : money(-x.a)}</span>
-          <span class="seg-mini hi-dir" role="group" aria-label="Direction"><button data-f="dir" data-id="out" aria-pressed="${x.dir === "out"}">Spent</button><button data-f="dir" data-id="in" aria-pressed="${x.dir === "in"}">Received</button></span>
-        </li>`).join("")}</ul>
-        <div class="hg-bulk"><button class="link" data-f="all-on">Include all</button><button class="link" data-f="all-off">Leave all out</button></div>` : ""}
-    </div>`;
+  const whenShort = t => new Date(t).toLocaleString("en-GB", {weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+  const whenLong = t => new Date(t).toLocaleString("en-GB", {weekday:"long", day:"numeric", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit"});
+  const kindFor = dir => dir === "out" ? "out" : "in";
+  const fits = (c, dir) => c && Cat(c).id !== "none" && !Cat(c).archived && kindOf(Cat(c)) === kindFor(dir);
+  let listScroll = 0;
+
+  const rowHTML = (r, i) => {
+    const c = r.c ? Cat(r.c) : null;
+    return `<button class="row hrow${r.on ? "" : " off"}" data-i="${i}">
+      <span class="ricon${c ? "" : " neutral"}" ${c ? `style="--c:${cColor(r.c)}"` : ""}><span class="ms">${c ? esc(c.icon) : r.dir === "out" ? "north_east" : "south_west"}</span></span>
+      <span class="rmain"><span class="rtitle">${esc(r.who)}</span><span class="rsub">${esc(whenShort(r.t))} · ${r.on ? (c ? esc(c.name) : "<b>Tap to label</b>") : "Left out"}</span></span>
+      <span class="ramt${r.dir === "in" ? " pos" : ""}">${r.dir === "in" ? money(r.a, {sign:true}) : money(-r.a)}</span></button>`;
   };
-  const draw = (keepScroll = false) => {
-    const keep = keepScroll ? body.scrollTop : 0;
+
+  const drawList = () => {
+    const months = [];
+    rows.forEach((r, i) => { const k = monthKey(r.t); let m = months[months.length - 1]; if (!m || m.k !== k) { m = {k, idx:[]}; months.push(m); } m.idx.push(i); });
+    const inc = rows.filter(r => r.on), labeled = inc.filter(r => r.c).length;
+    const sumOf = (list, dir) => list.filter(r => r.on && r.dir === dir).reduce((s, r) => s + r.a, 0);
     openSheet(`
-      <div class="sheet-head" data-drag><h3>Label your past spending</h3>
+      <div class="sheet-head" data-drag><h3>Past transactions</h3>
         <button class="close" data-k="eye" aria-label="${S.hide ? "Show amounts" : "Hide amounts"}"><span class="ms">${S.hide ? "visibility_off" : "visibility"}</span></button>
         <button class="close" data-k="close" aria-label="Close"><span class="ms">close</span></button></div>
-      <p class="hero-sub" style="margin:0 0 10px">${good.length} transactions, ${range}. Pick categories for each name. Tap a name to see every transaction, its date, and fix whether it was spent or received.</p>
-      <div class="hsum" id="hSum"></div>
-      ${skipped ? `<p class="note" style="padding:0 0 8px">${skipped} email${skipped > 1 ? "s" : ""} had no amount and will be left out.</p>` : ""}
-      <div class="hgroups" id="hGroups">${groups.map(groupHTML).join("")}</div>
-      <div class="sheet-foot"><button class="btn primary block" id="hSave"></button></div>
+      <p class="hero-sub" style="margin:0 0 8px">${rows.length} from your bank emails, ${range}. Tap one to label it. A label also goes to other transactions with the same name.</p>
+      <div class="hsum"><span><i class="kkey" style="--c:var(--out)"></i>Spent <b>${money(sumOf(rows, "out"))}</b></span><span><i class="kkey" style="--c:var(--in)"></i>Received <b>${money(sumOf(rows, "in"))}</b></span><span>${labeled} of ${inc.length} labeled</span></div>
+      ${skipped ? `<p class="note" style="padding:0 0 4px">${skipped} email${skipped > 1 ? "s" : ""} had no amount and will be left out.</p>` : ""}
+      ${months.map(m => {
+        const list = m.idx.map(i => rows[i]), o = sumOf(list, "out"), n = sumOf(list, "in");
+        return `<div class="day"><div class="day-head"><span>${monthLabel(m.k)}</span><span class="num">${[o ? money(-o) : "", n ? money(n, {sign:true}) : ""].filter(Boolean).join(" · ")}</span></div>
+          <div class="list" style="background:var(--surface-2)">${m.idx.map(i => rowHTML(rows[i], i)).join("")}</div></div>`;
+      }).join("")}
+      <div class="sheet-foot"><button class="btn primary block" id="hSave" ${inc.length ? "" : "disabled"}>${inc.length ? `Save ${inc.length} past record${inc.length > 1 ? "s" : ""}` : "Include at least one transaction"}</button></div>
     `, root => {
-      const save = $("#hSave", root), sum = $("#hSum", root);
-      const sync = () => {
-        const t = totals(good);
-        sum.innerHTML = `<span><i class="kkey" style="--c:var(--out)"></i>Spent <b>${money(t.o)}</b> (${t.no})</span><span><i class="kkey" style="--c:var(--in)"></i>Received <b>${money(t.i)}</b> (${t.ni})</span>`;
-        const n = t.no + t.ni;
-        save.disabled = !n; save.textContent = n ? `Save ${n} past record${n > 1 ? "s" : ""}` : "Include at least one transaction";
-      };
-      const redraw = i => { const el = root.querySelector(`.hg[data-i="${i}"]`); el.outerHTML = groupHTML(groups[i], i); sync(); };
       root.onclick = e => {
         if (e.target.closest('[data-k="close"]')) { closeSheet(); return; }
-        if (e.target.closest('[data-k="eye"]')) { S.hide = !S.hide; render(); draw(true); return; }
-        const b = e.target.closest("[data-f]"); if (!b || b.matches("input,select")) return;
-        const row = b.closest(".hg"); if (!row) return;
-        const i = Number(row.dataset.i), g = groups[i], f = b.dataset.f;
-        if (f === "open") g.open = !g.open;
-        else if (f === "dir") { const x = g.items[Number(b.closest(".hi").dataset.j)]; x.dir = b.dataset.id; }
-        else if (f === "all-on" || f === "all-off") g.items.forEach(x => { x.on = f === "all-on"; });
-        else return;
-        redraw(i);
+        if (e.target.closest('[data-k="eye"]')) { S.hide = !S.hide; render(); listScroll = body.scrollTop; drawList(); return; }
+        const row = e.target.closest(".hrow");
+        if (row) { listScroll = body.scrollTop; drawLabel(Number(row.dataset.i)); }
       };
-      root.onchange = e => {
-        const f = e.target.dataset.f, row = e.target.closest(".hg"); if (!f || !row) return;
-        const i = Number(row.dataset.i), g = groups[i];
-        if (f === "cOut") g.cOut = e.target.value || null;
-        else if (f === "cIn") g.cIn = e.target.value || null;
-        else if (f === "on") { g.items[Number(e.target.closest(".hi").dataset.j)].on = e.target.checked; redraw(i); }
-      };
-      save.addEventListener("click", () => {
-        const entries = [];
-        for (const g of groups) {
-          const key = g.who.toLowerCase();
-          if (g.cOut) cfg.learn[key] = g.cOut; else if (g.cIn) cfg.learn[key] = g.cIn;
-          for (const x of g.items) if (x.on) {
-            const c = x.dir === "out" ? g.cOut : g.cIn;
-            const e = {id:newId(), t:x.t, type:x.dir === "out" ? "spend" : "income", w:HIST, a:x.a, n:g.who, hist:true, src:"mail", mid:x.id};
-            if (c) e.c = c;
-            entries.push(e);
-          }
-        }
-        // Every email from this import counts as handled, so ones you left out don't come back.
-        const ids = items.map(i => i.id), idSet = new Set(ids);
-        cfg.handled = [...cfg.handled, ...ids].slice(-8000);
-        const hc = histCache(); for (const id of ids) delete hc[id]; histCacheSave(hc);
-        closeSheet();
-        S.tab = "activity"; S.actView = "year"; S.actMonth = monthKey(entries.reduce((m, e) => Math.min(m, e.t), Date.now()));
-        commit(entries, null);
-        scroller.scrollTop = 0;
-        toast(`Saved ${entries.length} past records`, () => {
-          removeEntries(entries.map(e => e.id), true);
-          cfg.handled = cfg.handled.filter(id => !idSet.has(id)); saveState();
-        });
-      });
-      sync();
-      body.scrollTop = keep;
-    }, "Label past spending");
+      $("#hSave", root).addEventListener("click", saveAll);
+      body.scrollTop = listScroll;
+    }, "Past transactions");
   };
-  draw();
+
+  const nextToLabel = i => {
+    for (let k = 1; k <= rows.length; k++) { const j = (i + k) % rows.length; if (rows[j].on && !rows[j].c) return j; }
+    return -1;
+  };
+  const drawLabel = i => {
+    const r = rows[i], origName = r.who.toLowerCase();
+    const st = {dir:r.dir, c:r.c, v:r.a % 100 === 0 ? String(r.a / 100) : (r.a / 100).toFixed(fracDigits())};
+    const draw = () => {
+      const idx = st.dir === "out" ? 0 : 1, kind = kindFor(st.dir);
+      openSheet(`
+        <div class="sheet-head" data-drag>
+          <button class="close" data-k="back" aria-label="Back to the list"><span class="ms">chevron_left</span></button>
+          <div class="seg seg2" role="group" aria-label="Direction"><span class="ind" style="transform:translateX(${idx * 100}%)"></span>
+            <button data-k="dir" data-id="out" aria-pressed="${st.dir === "out"}">Spent</button><button data-k="dir" data-id="in" aria-pressed="${st.dir === "in"}">Received</button></div>
+        </div>
+        <div class="amount" id="amt"></div>
+        <div class="hint">${esc(whenLong(r.t))}</div>
+        <div class="flabel">${kind === "out" ? "For" : "Source"}</div>
+        ${catChips(st.c, kind).replace(/<button class="chip" data-k="newcat">[\s\S]*?<\/button>/, "")}
+        <div class="inline"><input class="field" id="note" maxlength="60" autocomplete="off" enterkeyhint="done" value="${esc(r.who)}" aria-label="Name"></div>
+        ${keypadHTML()}
+        <div class="btn-row">
+          <button class="btn" id="lOut">${r.on ? "Leave out" : "Include again"}</button>
+          <button class="btn primary" id="lNext">Save & next</button>
+        </div>
+      `, root => {
+        const amt = $("#amt", root), note = $("#note", root);
+        const paint = () => paintAmount(amt, st.v);
+        onSheetKey = bindKeypad(root, () => st.v, v => { st.v = v; paint(); });
+        note.addEventListener("keydown", e => { if (e.key === "Enter") note.blur(); });
+        root.onclick = e => {
+          const b = e.target.closest("[data-k]"); if (!b) return;
+          const k = b.dataset.k;
+          if (k === "back") drawList();
+          else if (k === "dir" && b.dataset.id !== st.dir) { st.dir = b.dataset.id; if (!fits(st.c, st.dir)) st.c = fits(guessCat(r.who, st.dir), st.dir) ? guessCat(r.who, st.dir) : null; r.who = note.value.trim() || r.who; draw(); }
+          else if (k === "c") { st.c = st.c === b.dataset.id ? null : b.dataset.id; root.querySelectorAll('[data-k="c"]').forEach(x => x.setAttribute("aria-pressed", x.dataset.id === st.c)); }
+        };
+        $("#lOut", root).onclick = () => {
+          r.on = !r.on;
+          if (!r.on) { const j = nextToLabel(i); toast("Left out"); if (j >= 0) drawLabel(j); else drawList(); }
+          else draw();
+        };
+        $("#lNext", root).onclick = () => {
+          r.dir = st.dir; r.c = st.c; r.a = toCents(st.v) || r.a; r.who = note.value.trim() || r.who; r.on = true;
+          let more = 0;
+          if (r.c) for (const x of rows) if (x !== r && x.on && !x.c && x.dir === r.dir && x.who.toLowerCase() === origName) { x.c = r.c; x.who = r.who; more++; }
+          const j = nextToLabel(i);
+          if (more) toast(`Also labeled ${more} more from ${r.who}`);
+          if (j >= 0) drawLabel(j); else { drawList(); if (!more) toast("Everything is labeled"); }
+        };
+        paint();
+      }, "Label transaction");
+    };
+    draw();
+  };
+
+  const saveAll = () => {
+    const entries = [];
+    for (const r of rows) if (r.on) {
+      if (r.c) cfg.learn[r.who.toLowerCase()] = r.c;
+      const e = {id:newId(), t:r.t, type:r.dir === "out" ? "spend" : "income", w:HIST, a:r.a, n:r.who, hist:true, src:"mail", mid:r.id};
+      if (r.c) e.c = r.c;
+      entries.push(e);
+    }
+    // Every email from this import counts as handled, so ones you left out don't come back.
+    const ids = items.map(i => i.id), idSet = new Set(ids);
+    cfg.handled = [...cfg.handled, ...ids].slice(-8000);
+    const hc = histCache(); for (const id of ids) delete hc[id]; histCacheSave(hc);
+    closeSheet();
+    S.tab = "activity"; S.actView = "year"; S.actMonth = monthKey(entries.reduce((m, e) => Math.min(m, e.t), Date.now()));
+    commit(entries, null);
+    scroller.scrollTop = 0;
+    toast(`Saved ${entries.length} past records`, () => {
+      removeEntries(entries.map(e => e.id), true);
+      cfg.handled = cfg.handled.filter(id => !idSet.has(id)); saveState();
+    });
+  };
+  drawList();
 }
 
 /* ---------------- year view ---------------- */
