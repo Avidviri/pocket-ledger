@@ -2173,9 +2173,7 @@ async function refreshInvest(auto = false) {
   } catch (err) {
     investBusy = false; render();
     if (err && err.code === "redirect") return;
-    toast(err && err.code === "parse" ? "Couldn't find \"Total value\" in that range. Check the range in Settings." :
-          err && (err.status === 403 || err.status === 404) ? "Google Sheets said no. Check the sheet link, and that the Sheets API is on." :
-          "Couldn't reach Google Sheets. Try again.");
+    toast(err && err.code === "parse" ? "Couldn't find \"Total value\" in that range. Check the range in Settings." : gErrMsg(err, "Google Sheets"));
   }
 }
 function investCardHTML() {
@@ -2249,7 +2247,10 @@ function histCutoff() {
   return startOfDay(Math.min(S.data.created || first, first));
 }
 const longDate = t => new Date(t).toLocaleDateString("en-US", {day:"numeric", month:"long", year:"numeric"});
-let histBusy = false;
+let histBusy = false, histMem = null;
+const HIST_CACHE = "pl-hist-cache";
+function histCache() { if (!histMem) histMem = lsGet(HIST_CACHE) || {}; return histMem; }
+function histCacheSave(c) { histMem = c; lsSet(HIST_CACHE, c); }
 function openHistoryImport() {
   const cfg = mailCfg();
   if (!cfg.clientId) { S.tab = "settings"; render(); scroller.scrollTop = 0; toast("Set up bank emails first"); return; }
@@ -2265,7 +2266,7 @@ function openHistoryImport() {
     <p class="hero-sub" style="margin:0">${longDate(cut - DAY)}, the day before you started</p>
     ${pastCount ? `<p class="note">You already have ${pastCount} past records. Emails imported before are skipped.</p>` : ""}
     <p class="note" id="histStatus" aria-live="polite"></p>
-    <div class="sheet-foot"><button class="btn primary block" id="histGo">Find emails</button></div>
+    <div class="sheet-foot"><button class="btn primary block" id="histGo">${Object.keys(histCache()).length ? "Continue reading" : "Find emails"}</button><button class="btn block" id="histPartial" hidden></button></div>
   `, root => {
     root.onclick = e => { if (e.target.closest('[data-k="close"]')) closeSheet(); };
     $("#histGo", root).onclick = () => {
@@ -2293,21 +2294,41 @@ async function runHistoryImport(from, to, root) {
     const known = new Set(cfg.handled);
     ids = ids.filter(id => !known.has(id));
     if (!ids.length) { histBusy = false; go.disabled = false; go.textContent = "Find emails"; say("No new bank emails in that period."); return; }
-    let done = 0;
-    const msgs = await pool8(ids, async id => {
-      const m = await gmail(`/messages/${id}?format=full`, "history");
-      done++; if (done % 10 === 0 || done === ids.length) say(`Reading ${done} of ${ids.length} emails…`);
-      return m;
-    });
-    const items = msgs.map(m => parseBankMail({id:m.id, subject:header(m, "subject"), from:addrOf(header(m, "from")), text:mailText(m.payload), time:Number(m.internalDate) || Date.now(), snippet:m.snippet || ""}))
-      .filter(it => it.t < to);
+    // Emails already read are kept on this phone, so a stop halfway never starts over.
+    const cache = histCache(), todo = ids.filter(id => !cache[id]);
+    let done = ids.length - todo.length, stopped = null, i = 0;
+    say(done ? `Picking up where it stopped: ${done} of ${ids.length} already read\u2026` : `Reading 0 of ${ids.length} emails\u2026`);
+    await Promise.all(Array.from({length:Math.min(4, todo.length)}, async () => {
+      while (i < todo.length && !stopped) {
+        const id = todo[i++];
+        try {
+          const m = await gmail(`/messages/${id}?format=full`, "history");
+          cache[id] = parseBankMail({id:m.id, subject:header(m, "subject"), from:addrOf(header(m, "from")), text:mailText(m.payload), time:Number(m.internalDate) || Date.now(), snippet:""});
+          done++;
+          if (done % 10 === 0 || done === ids.length) { say(`Reading ${done} of ${ids.length} emails\u2026`); histCacheSave(cache); }
+        } catch (err) { if (!stopped) stopped = err; }
+      }
+    }));
+    histCacheSave(cache);
+    const items = ids.filter(id => cache[id]).map(id => cache[id]).filter(it => it.t < to);
     histBusy = false;
+    if (stopped) {
+      if (stopped.code === "redirect") return;
+      if (go.isConnected) { go.disabled = false; go.textContent = "Continue reading"; }
+      say(`Read ${done} of ${ids.length} emails, then had to stop. ${gErrMsg(stopped)} Tap Continue reading to pick up where it left off.`);
+      const part = $("#histPartial", root);
+      if (part && items.length) {
+        part.hidden = false; part.textContent = `Review the ${items.length} read so far`;
+        part.onclick = () => openHistoryReview(items, from, to);
+      }
+      return;
+    }
     openHistoryReview(items, from, to);
   } catch (err) {
     histBusy = false;
     if (err && err.code === "redirect") return;
     if (go.isConnected) { go.disabled = false; go.textContent = "Try again"; }
-    say(err && err.status === 403 ? "Gmail said no. Check that the Gmail API is turned on in Google Cloud." : "Couldn't reach Gmail. Check your connection and try again.");
+    say(gErrMsg(err));
   }
 }
 function openHistoryReview(items, from, to) {
@@ -2364,6 +2385,7 @@ function openHistoryReview(items, from, to) {
       // Every email from this import counts as handled, so promos you unticked don't come back.
       const ids = items.map(i => i.id), idSet = new Set(ids);
       cfg.handled = [...cfg.handled, ...ids].slice(-8000);
+      const hc = histCache(); for (const id of ids) delete hc[id]; histCacheSave(hc);
       closeSheet();
       S.tab = "activity"; S.actView = "year"; S.actMonth = monthKey(entries[entries.length - 1] ? entries.reduce((m, e) => Math.min(m, e.t), Infinity) : Date.now());
       commit(entries, null);
@@ -2499,13 +2521,38 @@ function takeOAuthReturn() {
   return {next:saved.next};
 }
 async function gmail(path, next) { return gapi(GMAIL + path, next, G_SCOPE); }
+// Gmail allows about 50 message reads a second per person. Start at most one request every
+// 45 ms (about 22 a second), and back off when Google still says to slow down.
+let gNextStart = 0;
+async function gPace() {
+  const now = Date.now(), wait = Math.max(0, gNextStart - now);
+  gNextStart = Math.max(now, gNextStart) + 45;
+  if (wait) await sleep(wait);
+}
 async function gapi(url, next, scope) {
-  const token = gToken(scope);
-  if (!token) { googleSignIn(next); throw {code:"redirect"}; }
-  const r = await fetch(url, {headers:{Authorization:"Bearer " + token}});
-  if (r.status === 401) { lsSet(TOKEN_KEY, null); googleSignIn(next); throw {code:"redirect"}; }
-  if (!r.ok) throw {code:"http", status:r.status};
-  return r.json();
+  for (let attempt = 0; ; attempt++) {
+    const token = gToken(scope);
+    if (!token) { googleSignIn(next); throw {code:"redirect"}; }
+    await gPace();
+    let r;
+    try { r = await fetch(url, {headers:{Authorization:"Bearer " + token}}); }
+    catch (_) { if (attempt < 3) { await sleep(1000 * 2 ** attempt); continue; } throw {code:"offline"}; }
+    if (r.status === 401) { lsSet(TOKEN_KEY, null); googleSignIn(next); throw {code:"redirect"}; }
+    if (r.ok) return r.json();
+    let reason = "";
+    try { const j = await r.json(); const e = j.error || {}; reason = ((e.errors && e.errors[0] && e.errors[0].reason) || "") + " " + (e.status || "") + " " + (e.message || ""); } catch (_) {}
+    const disabled = /accessNotConfigured|SERVICE_DISABLED|has not been used|is disabled/i.test(reason);
+    const limited = !disabled && (r.status === 429 || r.status >= 500 || (r.status === 403 && /rate|quota|limit|exhausted/i.test(reason)));
+    if (limited && attempt < 6) { await sleep(Math.min(30000, 1500 * 2 ** attempt) + Math.random() * 800); continue; }
+    throw {code:disabled ? "disabled" : limited ? "rate" : "http", status:r.status, reason};
+  }
+}
+function gErrMsg(err, api = "Gmail") {
+  if (err && err.code === "rate") return `${api} asked Pocket Ledger to slow down. Wait a minute, then try again.`;
+  if (err && err.code === "disabled") return `The ${api} API is turned off in your Google Cloud project. Turn it on, then try again.`;
+  if (err && err.code === "offline") return "You seem to be offline. Check your connection and try again.";
+  if (err && (err.status === 403 || err.status === 404)) return api === "Gmail" ? "Google refused access. In Settings, sign out of Google, then try again." : "Google Sheets couldn't open that sheet. Check the link, and that you signed in with the account that owns it.";
+  return `Couldn't reach ${api}. Try again in a moment.`;
 }
 async function pool8(items, fn) {
   const out = []; let i = 0;
@@ -2567,7 +2614,7 @@ async function checkMail() {
   } catch (err) {
     mailBusy = false; render();
     if (err && err.code === "redirect") return;
-    toast(err && err.status === 403 ? "Gmail said no. Check that the Gmail API is turned on in Google Cloud." : "Couldn't reach Gmail. Check your connection and try again.");
+    toast(gErrMsg(err));
   }
 }
 async function findSenders() {
@@ -2592,7 +2639,7 @@ async function findSenders() {
   } catch (err) {
     mailBusy = false; render();
     if (err && err.code === "redirect") return;
-    toast(err && err.status === 403 ? "Gmail said no. Check that the Gmail API is turned on in Google Cloud." : "Couldn't reach Gmail. Check your connection and try again.");
+    toast(gErrMsg(err));
   }
 }
 function openSenderPicker(found) {
