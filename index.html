@@ -1317,6 +1317,14 @@ function viewSettings() {
   <h1 class="page-title">Settings</h1>
   ${catSettingsHTML("out", "Spending categories", "What you spend on, like Food or Transport. Any wallet can use any category.", byCat)}
   ${catSettingsHTML("in", "Income categories", "Where your money comes from, like Salary or Side income.", Object.fromEntries(byCategory(mk, "income")))}
+  <section class="sec">
+    <div class="sec-head"><h2>Past records</h2></div>
+    <p class="note" style="padding:0 2px 10px">Income or spending from before you started, typed in by hand. They count in Month and Year analysis only and never change your wallets.</p>
+    <div class="btn-row">
+      <button class="btn" data-act="past-add" data-id="income" style="background:var(--surface)"><span class="ms">south_west</span>Add past income</button>
+      <button class="btn" data-act="past-add" data-id="spend" style="background:var(--surface)"><span class="ms">north_east</span>Add past spending</button>
+    </div>
+  </section>
   ${mailSettingsHTML()}
   ${investSettingsHTML()}
   <section class="sec">
@@ -1890,10 +1898,10 @@ function openEntryDetail(id) {
       <div class="kv"><span class="k">When</span><span class="v">${new Date(e.t).toLocaleString("en-GB", {weekday:"short", day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"})}</span></div>
     </div>
     <div class="btn-row">
-      ${e.type !== "adjust" && !e.hist ? `<button class="btn primary" id="edit"><span class="ms">edit</span>Edit</button>` : ""}
-      <button class="btn danger" id="del" ${e.type === "adjust" || e.hist ? 'style="grid-column:1 / -1"' : ""}><span class="ms">delete</span>Delete</button>
+      ${e.type !== "adjust" ? `<button class="btn primary" id="edit"><span class="ms">edit</span>Edit</button>` : ""}
+      <button class="btn danger" id="del" ${e.type === "adjust" ? 'style="grid-column:1 / -1"' : ""}><span class="ms">delete</span>Delete</button>
     </div>
-    <p class="note" style="text-align:center;margin:0 auto">${e.hist ? "A past record from your bank email. It's for analysis only and doesn't change any wallet." : e.type === "adjust" ? "To change a balance, use Set balance on the wallet." : "Editing or deleting updates your wallet balances."}</p>
+    <p class="note" style="text-align:center;margin:0 auto">${e.hist ? `A past record${e.src === "mail" ? " from your bank email" : ""}. It's for analysis only and doesn't change any wallet.` : e.type === "adjust" ? "To change a balance, use Set balance on the wallet." : "Editing or deleting updates your wallet balances."}</p>
   `, root => {
     root.onclick = ev => {
       if (ev.target.closest('[data-k="close"]')) { closeSheet(); return; }
@@ -1907,6 +1915,7 @@ function openEntryDetail(id) {
     $("#del", root).addEventListener("click", () => { closeSheet(); removeEntries([id]); });
     const edit = $("#edit", root);
     if (edit) edit.addEventListener("click", () => {
+      if (e.hist) { openPastEntry({editId:e.id}); return; }
       const f = fracDigits(), v = e.a % 100 === 0 ? String(e.a / 100) : (e.a / 100).toFixed(f);
       openEntry(e.type, {editId:e.id, v, w:e.w, from:e.w, to:e.to || null, note:e.n || "", date:isoDate(e.t), c:e.c || null});
     });
@@ -2463,6 +2472,91 @@ function openHistoryReview(items, from, to) {
   drawList();
 }
 
+/* ---------------- add a past record by hand (analysis only) ---------------- */
+// Same layout as adding a transaction, but saved as a past record (hist:true, w:"hist"),
+// so it counts in Month and Year analysis and never touches a wallet.
+let pastDateMemo = null;
+function openPastEntry(preset = {}) {
+  const orig = preset.editId ? allEntries().find(x => x.id === preset.editId) : null;
+  const amtStr = a => a % 100 === 0 ? String(a / 100) : (a / 100).toFixed(fracDigits());
+  const today = isoDate(Date.now());
+  const st = {
+    type: orig ? orig.type : (preset.type || "income"),
+    v: orig ? amtStr(orig.a) : "",
+    c: orig ? orig.c || null : null,
+    note: orig ? orig.n || "" : "",
+    date: orig ? isoDate(orig.t) : (pastDateMemo || isoDate(histCutoff() - DAY)),
+  };
+  if (st.date > today) st.date = today;
+  const draw = () => {
+    const idx = st.type === "income" ? 0 : 1, kind = st.type === "income" ? "in" : "out";
+    openSheet(`
+      <div class="sheet-head" data-drag>
+        <div class="seg seg2" role="group" aria-label="Type"><span class="ind" style="transform:translateX(${idx * 100}%)"></span>
+          <button data-k="type" data-id="income" aria-pressed="${st.type === "income"}">Received</button><button data-k="type" data-id="spend" aria-pressed="${st.type === "spend"}">Spent</button></div>
+        <button class="close" data-k="close" aria-label="Close"><span class="ms">close</span></button>
+      </div>
+      <div class="amount zero" id="amt" aria-live="polite"></div>
+      <div class="hint">${orig ? "Editing a past record. " : "Past record. "}Counts in your analysis, never in your wallets.</div>
+      <div class="flabel">${kind === "in" ? "Source" : "For"}</div>
+      ${catChips(st.c, kind).replace(/<button class="chip" data-k="newcat">[\s\S]*?<\/button>/, "")}
+      <div class="inline">
+        <input class="field" id="note" maxlength="60" autocomplete="off" enterkeyhint="done" placeholder="${kind === "in" ? "From, e.g. company name" : "Where, e.g. 7-Eleven"}" value="${esc(st.note)}">
+        <input class="datefield" id="date" type="date" aria-label="Date" value="${st.date}" max="${today}">
+      </div>
+      ${keypadHTML()}
+      <div class="btn-row">
+        <button class="btn" id="pAnother">${orig ? "Cancel" : "Save & add another"}</button>
+        <button class="btn primary" id="pSave">${orig ? "Save changes" : "Save"}</button>
+      </div>
+    `, root => {
+      const amt = $("#amt", root), note = $("#note", root), date = $("#date", root);
+      const paint = () => paintAmount(amt, st.v);
+      onSheetKey = bindKeypad(root, () => st.v, v => { st.v = v; paint(); });
+      note.addEventListener("keydown", e => { if (e.key === "Enter") note.blur(); });
+      date.addEventListener("change", () => { st.date = date.value || st.date; });
+      root.onclick = e => {
+        const b = e.target.closest("[data-k]"); if (!b) return;
+        const k = b.dataset.k;
+        if (k === "close") closeSheet();
+        else if (k === "type" && b.dataset.id !== st.type) { st.type = b.dataset.id; st.c = null; st.note = note.value; draw(); }
+        else if (k === "c") { st.c = st.c === b.dataset.id ? null : b.dataset.id; root.querySelectorAll('[data-k="c"]').forEach(x => x.setAttribute("aria-pressed", x.dataset.id === st.c)); }
+      };
+      const save = another => {
+        const a = toCents(st.v);
+        if (!a) { amt.classList.remove("shake"); void amt.offsetWidth; amt.classList.add("shake"); return; }
+        const [y, m, d] = st.date.split("-").map(Number);
+        let t = new Date(y, m - 1, d, 12, 0, 0).getTime();
+        if (orig && isoDate(orig.t) === st.date) t = orig.t; // keep the original time when the date didn't change
+        st.note = note.value.trim();
+        const e = {id:orig ? orig.id : newId(), t, type:st.type, w:HIST, a, n:st.note, hist:true, src:orig ? orig.src || "manual" : "manual"};
+        if (orig && orig.mid) e.mid = orig.mid;
+        if (st.c) e.c = st.c;
+        pastDateMemo = st.date;
+        const label = `${st.type === "income" ? "Received" : "Spent"} ${money(a, {show:true})} on ${new Date(t).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"})}`;
+        if (orig) {
+          closeSheet();
+          const before = replaceEntry(orig.id, e);
+          if (before) toast("Past record updated", () => { replaceEntry(orig.id, before); toast("Undone"); });
+          return;
+        }
+        if (another) {
+          commit([e], null);
+          toast(`Saved. ${label}`, () => removeEntries([e.id], true));
+          st.v = ""; draw();
+        } else {
+          closeSheet();
+          commit([e], `Past record saved. ${label}`);
+        }
+      };
+      $("#pSave", root).onclick = () => save(false);
+      $("#pAnother", root).onclick = () => orig ? closeSheet() : save(true);
+      paint();
+    }, orig ? "Edit past record" : "Add a past record");
+  };
+  draw();
+}
+
 /* ---------------- year view ---------------- */
 function activityYear(key) {
   const y = key.slice(0, 4), nowKey = monthKey(Date.now());
@@ -2501,10 +2595,14 @@ function activityYear(key) {
         <span class="bbar"><i style="--c:${cColor(p.c)};transform:scaleX(${Math.max(0.01, p.a / topMax).toFixed(3)})"></i></span></div></li>`).join("")}</ul>` :
         `<p class="chart-empty">Places show up once your records have notes or come from bank emails.</p>`}
     </section>
-    ${canMail() ? `<section class="card hist-cta">
-      <div><h2 class="card-title">Fill in earlier months</h2><p class="note" style="padding:4px 0 0">${pastN ? `${pastN} past records from email are included above.` : "Import your bank emails from before you started. They're for analysis only and won't change your balances."}</p></div>
-      <button class="btn" data-act="hist-import"><span class="ms">history</span>Import</button>
-    </section>` : ""}
+    <section class="card">
+      <h2 class="card-title">Fill in earlier months</h2>
+      <p class="note" style="padding:4px 0 12px">${pastN ? `${pastN} past records are included above. ` : ""}Past records count in your analysis only. They never change your wallets.</p>
+      <div class="btn-row">
+        <button class="btn" data-act="past-add" data-id="income"><span class="ms">south_west</span>Add past income</button>
+        ${canMail() ? `<button class="btn" data-act="hist-import"><span class="ms">history</span>Import emails</button>` : `<button class="btn" data-act="past-add" data-id="spend"><span class="ms">north_east</span>Add past spending</button>`}
+      </div>
+    </section>
   </div>`;
 }
 function drawYear(el, y) {
@@ -2894,6 +2992,7 @@ document.addEventListener("click", e => {
     case "export": exportData(); break;
     case "invest-refresh": refreshInvest(); break;
     case "hist-import": openHistoryImport(); break;
+    case "past-add": openPastEntry({type:id === "spend" ? "spend" : "income"}); break;
     case "hist-clear": {
       if (!t.classList.contains("armed")) { t.classList.add("armed"); t.textContent = "Tap again"; setTimeout(() => { if (t.isConnected) { t.classList.remove("armed"); t.textContent = "Clear"; } }, 3500); break; }
       const removed = [];
